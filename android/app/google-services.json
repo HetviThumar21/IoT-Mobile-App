@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "35441965862",
+    "project_id": "sundaram-iot-app",
+    "storage_bucket": "sundaram-iot-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:35441965862:android:4fb1b45e9ea8fb2dc91fe7",
+        "android_client_info": {
+          "package_name": "com.sundaram.iot.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBuEvOM9TQmzGsD5UhyOuHaTPYvKKDAguI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
