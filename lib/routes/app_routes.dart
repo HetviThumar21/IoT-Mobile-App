@@ -35,8 +35,8 @@ class AppRoutes {
       case success:
         return AnimatedRoute.slide(const SuccessScreen());
 
-      // case dashboard:
-      //   return AnimatedRoute.slide(const DashboardScreen());
+    // case dashboard:
+    //   return AnimatedRoute.slide(const DashboardScreen());
 
       default:
         return MaterialPageRoute(

@@ -10,8 +10,10 @@ class ProfileDrawer extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // ───────── HEADER ─────────
+
+            /// ───────── EMPLOYEE DETAILS ─────────
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
@@ -24,21 +26,20 @@ class ProfileDrawer extends StatelessWidget {
                 ),
               ),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const CircleAvatar(
-                    radius: 30,
+                    radius: 34,
                     backgroundColor: Color(0xFF22D3EE),
                     child: Text(
                       "SK",
                       style: TextStyle(
                         color: Colors.black,
-                        fontSize: 18,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 16),
                   const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -47,12 +48,13 @@ class ProfileDrawer extends StatelessWidget {
                           "Suresh Kumar",
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 18,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                        SizedBox(height: 4),
                         Text(
-                          "Supervisor",
+                          "Supervisor • Plant A - North",
                           style: TextStyle(color: Colors.white70),
                         ),
                         SizedBox(height: 6),
@@ -67,25 +69,16 @@ class ProfileDrawer extends StatelessWidget {
                     ),
                   ),
                   IconButton(
-                    onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 16),
-
-            // ───────── MENU ITEMS ─────────
-            _menuItem(Icons.person, "Manage Profile"),
-            _menuItem(Icons.settings, "Settings"),
-            _menuItem(Icons.security, "Security"),
-            _menuItem(Icons.dark_mode, "Appearance"),
-            _menuItem(Icons.help_outline, "Help & Support"),
-
             const Spacer(),
 
-            // ───────── LOGOUT ─────────
+            /// ───────── LOGOUT BUTTON ─────────
             Padding(
               padding: const EdgeInsets.all(16),
               child: Container(
@@ -118,12 +111,7 @@ class ProfileDrawer extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 8),
-            const Text(
-              "Version 1.0.0 • OEE Monitor",
-              style: TextStyle(color: Colors.white38, fontSize: 12),
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
           ],
         ),
       ),

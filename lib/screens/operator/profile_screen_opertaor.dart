@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sundaram_iot_app/screens/login_screen.dart';
 
 class OperatorProfile extends StatelessWidget {
   const OperatorProfile({super.key});
@@ -230,7 +231,10 @@ class OperatorProfile extends StatelessWidget {
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         ),
         onPressed: () {
-          // TODO: Logout logic
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+          );
         },
         icon: const Icon(Icons.logout),
         label: const Text(

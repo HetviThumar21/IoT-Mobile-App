@@ -39,7 +39,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => DashboardMain()),
+      MaterialPageRoute(builder: (_) => IntroScreen()),
 
     );
 

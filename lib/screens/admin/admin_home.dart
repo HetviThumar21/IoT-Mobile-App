@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import '../dashboard/alerts_screen.dart';
 import 'admin_user_management.dart';
 import '../../widgets/shift_oee_card.dart';
 import '../../widgets/downtime_category_chart.dart';
+import 'alert_screen.dart';
+import 'daily_downtime_line_chart.dart';
 
 class AdminHome extends StatefulWidget {
   final VoidCallback onProfileTap;
@@ -86,9 +89,11 @@ class _AdminHomeState extends State<AdminHome> {
                   _systemControlCard(),
                   const SizedBox(height: 24),
                   ShiftOeeCard(plant: selectedPlant),
+                  const SizedBox(height: 40),
+                  DailyDowntimeLineChart(plant: selectedPlant),
                   const SizedBox(height: 24),
                   DowntimeCategoryChart(plant: selectedPlant),
-                  const SizedBox(height: 40),
+
                 ],
               ),
             ),
@@ -325,9 +330,18 @@ class _AdminHomeState extends State<AdminHome> {
                     ],
                     iconColor: Colors.orange,
                     subtitleColor: Colors.orange,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AlertsScreen(plant: 'Alerts',),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
+
             ],
           ),
         ],

@@ -7,6 +7,7 @@ import 'package:sundaram_iot_app/core/constant/GridBackground.dart';
 import 'package:sundaram_iot_app/common/network/api_service.dart';
 
 import 'dashboard/dashboard_main.dart';
+import 'operator/operator_dashboard.dart';
 import 'otp_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -43,56 +44,130 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   // ───────────────── LOGIN (API BASED) ─────────────────
+
+  // Future<void> _login() async {
+  //   if (_emailController.text.trim().isEmpty) {
+  //     AppToast.show(context, "Username required");
+  //     return;
+  //   }
+  //
+  //   if (!_loginWithOtp && _passwordController.text.trim().isEmpty) {
+  //     AppToast.show(context, "Password required");
+  //     return;
+  //   }
+  //
+  //   if (_loginWithOtp) {
+  //     Navigator.push(
+  //       context,
+  //       MaterialPageRoute(builder: (_) => const OTPScreen()),
+  //     );
+  //     return;
+  //   }
+  //
+  //   setState(() => _loading = true);
+  //
+  //   try {
+  //     final response = await DioClient().post(
+  //       '/PostLogin',
+  //       {
+  //         "UserName": _emailController.text.trim(),
+  //         "Password": _passwordController.text.trim(),
+  //       },
+  //     );
+  //     print('response---$response');
+  //
+  //     final data = response.data;
+  //
+  //     if (data is Map<String, dynamic> && data["isSuccess"] == true) {
+  //       // ✅ Success case
+  //       final token = data["token"];
+  //       final user = data["user"];
+  //
+  //       AppToast.show(context, data["message"] ?? "Login successful");
+  //
+  //       // You can store token/user info in secure storage or provider here
+  //       print("JWT Token: $token");
+  //       print("User: $user");
+  //
+  //       Navigator.pushReplacement(
+  //         context,
+  //         MaterialPageRoute(
+  //           builder: (_) => const DashboardMain(),
+  //         ),
+  //       );
+  //     } else {
+  //       // ❌ Failure case
+  //       AppToast.show(context, data["message"] ?? "Invalid username or password");
+  //     }
+  //   } catch (e) {
+  //     print('error---$e');
+  //     AppToast.show(context, "Unable to connect to server");
+  //   } finally {
+  //     setState(() => _loading = false);
+  //   }
+  // }
   Future<void> _login() async {
-    if (_emailController.text.trim().isEmpty) {
+    final username = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (username.isEmpty) {
       AppToast.show(context, "Username required");
       return;
     }
 
-    if (!_loginWithOtp && _passwordController.text.trim().isEmpty) {
+    if (!_loginWithOtp && password.isEmpty) {
       AppToast.show(context, "Password required");
       return;
     }
 
-    if (_loginWithOtp) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const OTPScreen()),
-      );
+    // 🔐 STATIC USERS
+    final users = {
+      "admin@gmail.com": {
+        "password": "admin123",
+        "role": "admin",
+      },
+      "supervisor@gmail.com": {
+        "password": "super123",
+        "role": "supervisor",
+      },
+      "operator@gmail.com": {
+        "password": "oper123",
+        "role": "operator",
+      },
+    };
+
+    if (!users.containsKey(username)) {
+      AppToast.show(context, "Invalid username or password");
       return;
     }
 
-    setState(() => _loading = true);
+    final user = users[username]!;
 
-    try {
-      final response = await DioClient().post(
-        '/PostLogin',
-        {
-          "UserName": _emailController.text.trim(),
-          "Password": _passwordController.text.trim(),
-        },
+    if (user["password"] != password) {
+      AppToast.show(context, "Invalid username or password");
+      return;
+    }
+
+    // ✅ LOGIN SUCCESS
+    AppToast.show(context, "Login successful");
+
+    final role = user["role"];
+
+    if (role == "admin") {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const DashboardMain()),
       );
-      print('response---$response');
-
-      final data = response.data;
-
-      if (data is Map<String, dynamic> && data["Result"] == true) {
-        AppToast.show(context, "Login successful");
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const DashboardMain(),
-          ),
-        );
-      } else {
-        AppToast.show(context, "Invalid username or password");
-      }
-    } catch (e) {
-      print('error---$e');
-      AppToast.show(context, "Unable to connect to server");
-    } finally {
-      setState(() => _loading = false);
+    } else if (role == "supervisor") {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const DashboardMain()),
+      );
+    } else if (role == "operator") {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const OperatorDashboard()),
+      );
     }
   }
 
@@ -167,7 +242,7 @@ class _LoginScreenState extends State<LoginScreen>
     return const Column(
       children: [
         Text(
-          "OEE MONITOR",
+          "iManufactory",
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,

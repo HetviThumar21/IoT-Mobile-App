@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:sundaram_iot_app/common/%20utils/app_toast.dart';
+import 'package:syncfusion_flutter_charts/charts.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -258,18 +259,26 @@ class _ReportsScreenState extends State<ReportsScreen> {
         const SizedBox(height: 16),
         Row(
           children: const [
-            _statBox("76.5%", "Avg OEE", Color(0xFF22D3EE)),
+            _statBox("5,320", "Total Production (Cases)", Color(0xFF22D3EE)),
             SizedBox(width: 12),
-            _statBox("127", "Total Mins", Colors.orange),
+            _statBox("4,980", "Total Dispatch", Colors.orange),
             SizedBox(width: 12),
-            _statBox("98.2%", "Quality", Colors.greenAccent),
+            _statBox("330 min", "Downtime (Monthly)", Colors.redAccent),
           ],
         ),
+
       ],
     );
   }
 
   Widget _chartCard() {
+    final data = [
+      _MonthlyData('Jan', 1200, 1100, 90),
+      _MonthlyData('Feb', 1350, 1250, 70),
+      _MonthlyData('Mar', 1280, 1200, 110),
+      _MonthlyData('Apr', 1500, 1400, 60),
+    ];
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -277,27 +286,59 @@ class _ReportsScreenState extends State<ReportsScreen> {
         borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Text("MONTHLY OEE TREND",
-                style: TextStyle(color: Colors.white60, fontSize: 13)),
+          const Text(
+            "MONTHLY PRODUCTION OVERVIEW",
+            style: TextStyle(color: Colors.white60, fontSize: 13),
           ),
           const SizedBox(height: 16),
           SizedBox(
-            height: 220,
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(show: false),
-                titlesData: FlTitlesData(show: false),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  _line([70, 75, 72, 78], Colors.cyanAccent),
-                  _line([82, 84, 80, 85], Colors.orange),
-                  _line([88, 90, 86, 92], Colors.greenAccent),
-                ],
+            height: 240,
+            child: SfCartesianChart(
+              plotAreaBorderWidth: 0,
+              legend: Legend(
+                isVisible: true,
+                textStyle: const TextStyle(color: Colors.white70),
               ),
-            ),
+              primaryXAxis: CategoryAxis(
+                labelStyle: const TextStyle(color: Colors.white54),
+                majorGridLines: const MajorGridLines(width: 0),
+              ),
+              primaryYAxis: NumericAxis(
+                labelStyle: const TextStyle(color: Colors.white54),
+                axisLine: const AxisLine(width: 0),
+                majorTickLines: const MajorTickLines(size: 0),
+              ),
+              series: <CartesianSeries<_MonthlyData, String>>[
+                ColumnSeries<_MonthlyData, String>(
+                  name: 'Production',
+                  dataSource: data,
+                  xValueMapper: (d, _) => d.month,
+                  yValueMapper: (d, _) => d.production,
+                  color: const Color(0xFF22D3EE),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                ColumnSeries<_MonthlyData, String>(
+                  name: 'Dispatch',
+                  dataSource: data,
+                  xValueMapper: (d, _) => d.month,
+                  yValueMapper: (d, _) => d.dispatch,
+                  color: Colors.orangeAccent,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                LineSeries<_MonthlyData, String>(
+                  name: 'Downtime',
+                  dataSource: data,
+                  xValueMapper: (d, _) => d.month,
+                  yValueMapper: (d, _) => d.downtime,
+                  color: Colors.redAccent,
+                  width: 3,
+                  markerSettings: const MarkerSettings(isVisible: true),
+                ),
+              ],
+            )
+            ,
           ),
         ],
       ),
@@ -453,4 +494,12 @@ class _exportButton extends StatelessWidget {
       ),
     );
   }
+}
+class _MonthlyData {
+  final String month;
+  final double production;
+  final double dispatch;
+  final double downtime;
+
+  _MonthlyData(this.month, this.production, this.dispatch, this.downtime);
 }

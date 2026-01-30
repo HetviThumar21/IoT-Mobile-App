@@ -16,130 +16,121 @@ class AdminUserManagement extends StatelessWidget {
         ),
         title: const Text("User Management"),
       ),
-      body: SingleChildScrollView(
+      body: ListView(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        children: [
+          const Text(
+            "Active Users",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
 
-            /// ================= HERO CARD =================
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFF0E7490),
-                    Color(0xFF020617),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(22),
+          _UserTile(
+            name: "Suresh Kumar",
+            role: "Admin",
+            plant: "Plant A - North",
+          ),
+          _UserTile(
+            name: "Ramesh Patel",
+            role: "Supervisor",
+            plant: "Plant B - South",
+          ),
+          _UserTile(
+            name: "Anil Sharma",
+            role: "Operator",
+            plant: "Plant C - East",
+          ),
+          _UserTile(
+            name: "Vikram Singh",
+            role: "Operator",
+            plant: "Plant A - North",
+          ),
+          _UserTile(
+            name: "Deepak Verma",
+            role: "Supervisor",
+            plant: "Plant B - South",
+          ),
+        ],
+      ),
+
+    );
+  }
+}
+class _UserTile extends StatelessWidget {
+  final String name;
+  final String role;
+  final String plant;
+
+  const _UserTile({
+    required this.name,
+    required this.role,
+    required this.plant,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF020617),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF1E293B)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: const Color(0xFF22D3EE),
+            child: Text(
+              name[0],
+              style: const TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.groups,
-                      size: 46, color: Color(0xFF22D3EE)),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        "156",
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        "Total Users",
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ],
-                  )
-                ],
-              ),
             ),
-
-            const SizedBox(height: 24),
-
-            /// ================= ROLE BREAKDOWN =================
-            const Text(
-              "User Breakdown",
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold),
-            ),
-
-            const SizedBox(height: 14),
-
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.1,
-              children: const [
-                _RoleCard(
-                  title: "Active Users",
-                  value: "142",
-                  icon: Icons.check_circle,
-                  color: Colors.green,
-                ),
-                _RoleCard(
-                  title: "Admins",
-                  value: "12",
-                  icon: Icons.security,
-                  color: Colors.red,
-                ),
-                _RoleCard(
-                  title: "Operators",
-                  value: "116",
-                  icon: Icons.engineering,
-                  color: Colors.orange,
-                ),
-                _RoleCard(
-                  title: "Supervisors",
-                  value: "28",
-                  icon: Icons.supervisor_account,
-                  color: Colors.cyan,
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 30),
-
-            /// ================= QUICK ACTIONS =================
-            const Text(
-              "Quick Actions",
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold),
-            ),
-
-            const SizedBox(height: 14),
-
-            Row(
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _ActionButton(
-                  icon: Icons.person_add,
-                  label: "Add User",
+                Text(
+                  name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
                 ),
-                _ActionButton(
-                  icon: Icons.list,
-                  label: "View Users",
-                ),
-                _ActionButton(
-                  icon: Icons.manage_accounts,
-                  label: "Roles",
+                const SizedBox(height: 4),
+                Text(
+                  "$role • $plant",
+                  style: const TextStyle(
+                    color: Colors.grey,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
-
-            const SizedBox(height: 40), // fills bottom space nicely
-          ],
-        ),
+          ),
+          Container(
+            padding:
+            const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text(
+              "Active",
+              style: TextStyle(color: Colors.green, fontSize: 11),
+            ),
+          )
+        ],
       ),
     );
   }

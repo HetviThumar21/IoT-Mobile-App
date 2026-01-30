@@ -15,57 +15,74 @@ class _OperatorDowntimeState extends State<OperatorDowntime> {
   final String shift = "06:00 - 14:00";
   final String operatorId = "OPR-102";
 
-  String machineStatus = "Down"; // Running | Idle | Down
-  DateTime downtimeStart = DateTime.now().subtract(const Duration(minutes: 18));
-
-  String? selectedCategory;
-  String? selectedSubReason;
-
-  Timer? _timer;
+  String machineStatus = "Running"; // Running | Down
+  DateTime? downtimeStart;
   Duration liveDuration = Duration.zero;
 
-  final Map<String, List<String>> subReasons = {
-    "Mechanical": ["Belt Jam", "Bearing Issue", "Motor Failure"],
-    "Electrical": ["Sensor Fault", "Power Trip"],
-    "Material": ["Bottle Jam", "Missing Hologram"],
-    "Quality": ["Barcode Rejection", "Print Blur"],
-    "Planned": ["Changeover", "Cleaning"],
-    "Other": ["Unknown Issue"],
-  };
+  Timer? _timer;
 
-  final List<Map<String, String>> todayLog = [
-    {
-      "time": "09:12",
-      "duration": "06 min",
-      "reason": "Sensor Fault",
-      "status": "Resolved"
-    },
-    {
-      "time": "10:42",
-      "duration": "18 min",
-      "reason": "Belt Jam",
-      "status": "Active"
-    },
-  ];
+  final TextEditingController remarkCtrl = TextEditingController();
 
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      setState(() {
-        liveDuration = DateTime.now().difference(downtimeStart);
-      });
-    });
-  }
+  final List<Map<String, String>> todayLog = [];
 
   @override
   void dispose() {
     _timer?.cancel();
+    remarkCtrl.dispose();
     super.dispose();
+  }
+
+  // ================= TIMER CONTROL =================
+  void _startDowntime() {
+    downtimeStart = DateTime.now();
+    machineStatus = "Down";
+    liveDuration = Duration.zero;
+
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      setState(() {
+        liveDuration = DateTime.now().difference(downtimeStart!);
+      });
+    });
+
+    setState(() {});
+  }
+
+  void _stopDowntime() {
+    _timer?.cancel();
+
+    final endTime = DateTime.now();
+    final duration = endTime.difference(downtimeStart!);
+
+    todayLog.insert(0, {
+      "time": TimeOfDay.now().format(context),
+      "duration": _formatDuration(duration),
+      "reason": remarkCtrl.text,
+      "status": "Reported",
+    });
+
+    // 🔔 AUTO NOTIFY (API later)
+    _sendDowntimeNotification(duration, remarkCtrl.text);
+
+    machineStatus = "Running";
+    downtimeStart = null;
+    liveDuration = Duration.zero;
+    remarkCtrl.clear();
+
+    setState(() {});
+  }
+
+  void _sendDowntimeNotification(Duration d, String remark) {
+    debugPrint("📤 Downtime sent to Supervisor & Admin");
+    debugPrint("Duration: ${_formatDuration(d)}");
+    debugPrint("Reason: $remark");
   }
 
   @override
   Widget build(BuildContext context) {
+    final Color statusColor =
+    machineStatus == "Running" ? Colors.green : Colors.red;
+
     return Scaffold(
       backgroundColor: const Color(0xFF0B1220),
       body: SafeArea(
@@ -77,13 +94,13 @@ class _OperatorDowntimeState extends State<OperatorDowntime> {
               const SizedBox(height: 16),
               _contextCard(),
               const SizedBox(height: 16),
-              _machineStatusCard(),
+              _statusCard(statusColor),
               const SizedBox(height: 16),
-              _downtimeReasonCard(),
+              if (machineStatus == "Down") _remarkCard(),
               const SizedBox(height: 16),
-              _actionButtons(),
+              _controlButton(statusColor),
               const SizedBox(height: 24),
-              _todayDowntimeLog(),
+              _todayLogCard(),
               const SizedBox(height: 40),
             ],
           ),
@@ -94,41 +111,15 @@ class _OperatorDowntimeState extends State<OperatorDowntime> {
 
   // ================= HEADER =================
   Widget _header() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0E7490), Color(0xFF020617)],
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
+    return _glassCard(
       child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFF22D3EE).withOpacity(0.15),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.warning_amber_rounded,
-                color: Color(0xFF22D3EE), size: 28),
-          ),
-          const SizedBox(width: 14),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Operator Downtime",
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold)),
-                SizedBox(height: 4),
-                Text("Live machine status & actions",
-                    style: TextStyle(color: Colors.white70)),
-              ],
-            ),
-          ),
+        children: const [
+          Icon(Icons.precision_manufacturing,
+              color: Color(0xFF22D3EE), size: 28),
+          SizedBox(width: 12),
+          Text("Operator Machine Control",
+              style:
+              TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -141,7 +132,7 @@ class _OperatorDowntimeState extends State<OperatorDowntime> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text("CURRENT CONTEXT",
-              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+              style: TextStyle(color: Colors.grey)),
           const SizedBox(height: 12),
           _info("Plant", plant),
           _info("Line", line),
@@ -154,149 +145,111 @@ class _OperatorDowntimeState extends State<OperatorDowntime> {
   }
 
   // ================= STATUS =================
-  Widget _machineStatusCard() {
-    Color color = machineStatus == "Running"
-        ? Colors.green
-        : machineStatus == "Idle"
-        ? Colors.orange
-        : Colors.red;
-
+  Widget _statusCard(Color color) {
     return _glassCard(
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text("MACHINE STATUS",
-                  style:
-                  TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-              Chip(
-                label: Text(machineStatus,
-                    style: const TextStyle(color: Colors.white)),
-                backgroundColor: color.withOpacity(0.25),
-              )
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(_formatDuration(liveDuration),
+          Text(machineStatus,
               style: TextStyle(
                   color: color,
-                  fontSize: 26,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text("Downtime Duration",
-              style: TextStyle(color: Colors.grey.shade400)),
-        ],
-      ),
-    );
-  }
-
-  // ================= REASON =================
-  Widget _downtimeReasonCard() {
-    return _glassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text("DOWNTIME REASON",
-              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: subReasons.keys.map((cat) {
-              final selected = selectedCategory == cat;
-              return ChoiceChip(
-                label: Text(cat),
-                selected: selected,
-                selectedColor: const Color(0xFF22D3EE),
-                labelStyle:
-                TextStyle(color: selected ? Colors.black : Colors.white),
-                onSelected: (_) {
-                  setState(() {
-                    selectedCategory = cat;
-                    selectedSubReason = null;
-                  });
-                },
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 12),
-          if (selectedCategory != null)
-            DropdownButtonFormField<String>(
-              value: selectedSubReason,
-              items: subReasons[selectedCategory]!
-                  .map((e) =>
-                  DropdownMenuItem(value: e, child: Text(e)))
-                  .toList(),
-              onChanged: (v) => setState(() => selectedSubReason = v),
-              dropdownColor: const Color(0xFF0B1220),
-              decoration: _inputDecoration("Select sub-reason"),
-              style: const TextStyle(color: Colors.white),
+          const SizedBox(height: 8),
+          if (machineStatus == "Down")
+            Text(
+              _formatDuration(liveDuration),
+              style: const TextStyle(
+                  color: Colors.redAccent,
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold),
             ),
         ],
       ),
     );
   }
 
-  // ================= ACTIONS =================
-  Widget _actionButtons() {
-    final bool canSubmit = selectedSubReason != null;
-
-    return Column(
-      children: [
-        _actionBtn("Log Downtime", Icons.warning, canSubmit),
-        _actionBtn("Request Maintenance", Icons.build, true),
-        _actionBtn("Notify Supervisor", Icons.notifications, true),
-        _actionBtn("Notify Admin", Icons.admin_panel_settings, true),
-        if (machineStatus != "Running")
-          _actionBtn("Resume Machine", Icons.play_arrow, true),
-      ],
-    );
-  }
-
-  Widget _actionBtn(String text, IconData icon, bool enabled) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: SizedBox(
-        width: double.infinity,
-        height: 54,
-        child: ElevatedButton.icon(
-          onPressed: enabled ? () {} : null,
-          icon: Icon(icon),
-          label: Text(text),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF22D3EE),
-            foregroundColor: Colors.black,
-            disabledBackgroundColor: Colors.grey.shade700,
-            shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+  // ================= REMARK =================
+  Widget _remarkCard() {
+    return _glassCard(
+      child: TextField(
+        controller: remarkCtrl,
+        maxLines: 3,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          hintText: "Enter downtime reason / remark",
+          hintStyle: const TextStyle(color: Colors.grey),
+          filled: true,
+          fillColor: const Color(0xFF0B1220),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFF22D3EE)),
           ),
         ),
       ),
     );
   }
 
+  // ================= BUTTON =================
+  Widget _controlButton(Color color) {
+    final bool canStop = machineStatus == "Running";
+    final bool canStart =
+        machineStatus == "Down" && remarkCtrl.text.isNotEmpty;
+
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton.icon(
+        icon: Icon(
+          machineStatus == "Running" ? Icons.stop : Icons.play_arrow,
+        ),
+        label: Text(
+          machineStatus == "Running"
+              ? "STOP MACHINE"
+              : "START MACHINE",
+          style: const TextStyle(fontSize: 16),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: machineStatus == "Running"
+              ? Colors.redAccent
+              : Colors.greenAccent,
+          foregroundColor: Colors.black,
+          shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        ),
+        onPressed: machineStatus == "Running"
+            ? _startDowntime
+            : canStart
+            ? _stopDowntime
+            : null,
+      ),
+    );
+  }
+
   // ================= LOG =================
-  Widget _todayDowntimeLog() {
+  Widget _todayLogCard() {
+    if (todayLog.isEmpty) return const SizedBox();
+
     return _glassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("TODAY'S DOWNTIME LOG",
-              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+          const Text("TODAY DOWNTIME",
+              style: TextStyle(color: Colors.grey)),
           const SizedBox(height: 12),
-          ...todayLog.map((e) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text("${e['time']} • ${e['reason']}",
-                    style: const TextStyle(color: Colors.white)),
-                Text("${e['duration']} • ${e['status']}",
-                    style: const TextStyle(color: Colors.grey)),
-              ],
+          ...todayLog.map(
+                (e) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(e["reason"]!,
+                      style: const TextStyle(color: Colors.white)),
+                  Text(e["duration"]!,
+                      style: const TextStyle(color: Colors.grey)),
+                ],
+              ),
             ),
-          )),
+          ),
         ],
       ),
     );
@@ -326,24 +279,6 @@ class _OperatorDowntimeState extends State<OperatorDowntime> {
               style: const TextStyle(
                   color: Colors.white, fontWeight: FontWeight.w600)),
         ],
-      ),
-    );
-  }
-
-  static InputDecoration _inputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(color: Colors.grey),
-      filled: true,
-      fillColor: const Color(0xFF0B1220),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFF22D3EE)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide:
-        const BorderSide(color: Color(0xFF22D3EE), width: 1.5),
       ),
     );
   }

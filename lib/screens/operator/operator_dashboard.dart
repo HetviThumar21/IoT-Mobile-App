@@ -34,9 +34,7 @@ class _OperatorDashboardState extends State<OperatorDashboard> {
           });
         },
       ),
-      OperatorDowntime(
-
-      ),
+      OperatorDowntime(),
       const OperatorMaintenance(),
       const OperatorProfile(),
     ];

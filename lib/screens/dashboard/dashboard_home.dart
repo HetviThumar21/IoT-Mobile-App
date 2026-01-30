@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sundaram_iot_app/screens/dashboard/profile_screen.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:sundaram_iot_app/screens/dashboard/team_screen.dart';
 import 'package:sundaram_iot_app/screens/dashboard/lines_screen.dart';
@@ -159,7 +160,7 @@ class _DashboardHomeState extends State<DashboardHome> {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const ProfileDrawer()),
+          MaterialPageRoute(builder: (_) => const SupervisorProfile ()),
         );
       },
       child: Container(

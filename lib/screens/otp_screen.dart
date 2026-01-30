@@ -104,14 +104,14 @@ class _OTPScreenState extends State<OTPScreen>
       return;
     }
 
-      AppToast.show(context,"Login successful");
+    AppToast.show(context,"Login successful");
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const DashboardMain(),
-        ),
-      );
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const DashboardMain(),
+      ),
+    );
   }
 
   @override

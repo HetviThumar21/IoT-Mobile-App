@@ -48,7 +48,7 @@ class _DashboardMainState extends State<DashboardMain> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 _navItem(Icons.grid_view_rounded, "Dashboard", 0),
-                _navItem(Icons.warning_rounded, "Downtime", 1, badge: "3"),
+                _navItem(Icons.warning_rounded, "Downtime", 1, ),
                 _navItem(Icons.build_rounded, "Maintenance", 2),
                 _navItem(Icons.monitor_heart_rounded, "Live", 3),
                 _navItem(Icons.description_rounded, "Reports", 4),
