@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'maintenance_requests_screen.dart';
 
 class AdminMaintenance extends StatefulWidget {
-  const AdminMaintenance({super.key});
+  final int userId;
+
+  const AdminMaintenance({super.key,required this.userId});
 
   @override
   State<AdminMaintenance> createState() => _AdminMaintenanceState();

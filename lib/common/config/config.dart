@@ -10,7 +10,7 @@ class AppConfig {
   static String get baseUrl {
     switch (environment) {
       case Environment.TESTING:
-        return 'https://192.168.1.105:8888/Api/STDataLog';
+        return 'https://172.20.10.2:8021/api/auth';
       case Environment.LIVE:
         return 'https://makesure.org:8018/api/';
     }

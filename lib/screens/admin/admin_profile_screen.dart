@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:sundaram_iot_app/screens/login_screen.dart';
 
 class AdminProfile extends StatelessWidget {
-  const AdminProfile({super.key});
+  final int userId;
+
+  const AdminProfile({super.key,required this.userId});
 
   // 🔹 Example admin data (replace with API response)
   final Map<String, String> user = const {

@@ -8,7 +8,9 @@ import 'reports_screen.dart';
 import 'profile_screen.dart';
 
 class DashboardMain extends StatefulWidget {
-  const DashboardMain({super.key});
+  final int userId;
+
+  const DashboardMain({Key? key, required this.userId}) : super(key: key);
 
   @override
   State<DashboardMain> createState() => _DashboardMainState();

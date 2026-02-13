@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 class AdminDowntime extends StatefulWidget {
-  const AdminDowntime({super.key});
+  final int userId;
+
+  const AdminDowntime({super.key,required this.userId});
 
   @override
   State<AdminDowntime> createState() => _AdminDowntimeState();

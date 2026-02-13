@@ -1,11 +1,18 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sundaram_iot_app/common/%20utils/app_toast.dart';
+import 'package:sundaram_iot_app/common/network/api_service.dart';
+
 import '../ui/glass_system.dart';
-import '../screens/dashboard/dashboard_main.dart';
+import 'admin/admin_main.dart';
+import 'dashboard/dashboard_main.dart';
+import 'operator/operator_dashboard.dart';
 
 class OTPScreen extends StatefulWidget {
-  const OTPScreen({super.key});
+  final String email;
+
+  const OTPScreen({super.key, required this.email});
 
   @override
   State<OTPScreen> createState() => _OTPScreenState();
@@ -13,13 +20,16 @@ class OTPScreen extends StatefulWidget {
 
 class _OTPScreenState extends State<OTPScreen>
     with SingleTickerProviderStateMixin {
+
   final List<TextEditingController> _controllers =
   List.generate(4, (_) => TextEditingController());
+
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
 
-  final String _correctOtp = "1234"; // dummy OTP
+  bool _loading = false;
 
   @override
   void initState() {
@@ -48,70 +58,86 @@ class _OTPScreenState extends State<OTPScreen>
     super.dispose();
   }
 
-  void _showToast(String message) {
-    final overlay = Overlay.of(context);
-    late OverlayEntry entry;
+  // 🔥 VERIFY OTP API CALL
+  Future<void> _verifyOtp() async {
+    final enteredOtp = _controllers.map((e) => e.text).join();
 
-    entry = OverlayEntry(
-      builder: (_) => Positioned(
-        bottom: 80,
-        left: 24,
-        right: 24,
-        child: Material(
-          color: Colors.transparent,
-          child: AnimatedOpacity(
-            opacity: 1,
-            duration: const Duration(milliseconds: 300),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 20, vertical: 14),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                color: Colors.black.withOpacity(0.65),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
-                    blurRadius: 20,
-                  ),
-                ],
-              ),
-              child: Text(
-                message,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    color: Colors.white, fontSize: 14),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    overlay.insert(entry);
-
-    Future.delayed(const Duration(seconds: 2), () {
-      entry.remove();
-    });
-  }
-
-  void _verifyOtp() {
-    final enteredOtp =
-    _controllers.map((e) => e.text).join();
-
-    if (enteredOtp != _correctOtp) {
-      _shakeController.forward(from: 0);
-      AppToast.show(context,"Invalid OTP");
+    if (enteredOtp.length != 4) {
+      AppToast.show(context, "Enter complete OTP");
       return;
     }
 
-    AppToast.show(context,"Login successful");
+    setState(() => _loading = true);
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const DashboardMain(),
-      ),
-    );
+    try {
+      final response = await DioClient().post(
+        '/otp/verify',
+        {
+          "email": widget.email,
+          "otp": enteredOtp,
+        },
+      );
+
+      final data = response.data;
+    print('reponse--$data');
+
+
+      if (data != null && data["isSuccess"] == true) {
+
+        final String token = data["token"] ?? "";
+        final Map<String, dynamic> user = data["user"] ?? {};
+
+        final int roleId = user["roleId"] ?? 0;
+        final int userId = user["userId"] ?? 0;
+
+        // 🔐 Save token securely
+        await _storage.write(key: "auth_token", value: token);
+        await _storage.write(key: "role_id", value: roleId.toString());
+        await _storage.write(key: "user_id", value: userId.toString());
+
+        AppToast.show(context, data["message"] ?? "Login successful");
+
+        // 🎯 Role Based Navigation
+        Widget nextScreen;
+
+        // if (roleId == 11) {
+        //   nextScreen = const AdminMain();
+        // } else if (roleId == 14) {
+        //   nextScreen = const DashboardMain();
+        // } else if (roleId == 15) {
+        //   nextScreen = const OperatorDashboard();
+        // } else {
+        //   nextScreen = const DashboardMain();
+        // }
+
+        if (roleId == 11) {
+          nextScreen = AdminMain( userId: userId,);      // Admin
+        } else if (roleId == 14) {
+          nextScreen =  DashboardMain(userId: userId,); // Supervisor
+        } else if (roleId == 15) {
+          nextScreen =  OperatorDashboard(userId: userId,);   // Operator
+        }
+        else {
+          nextScreen =  DashboardMain(userId: userId,);       // Default
+        }
+
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => nextScreen),
+              (route) => false,
+        );
+
+      } else {
+        _shakeController.forward(from: 0);
+        AppToast.show(context, data?["message"] ?? "Invalid OTP");
+      }
+
+    } catch (e) {
+      print("OTP Verify Error: $e");
+      AppToast.show(context, "Unable to verify OTP");
+    } finally {
+      setState(() => _loading = false);
+    }
   }
 
   @override
@@ -150,21 +176,19 @@ class _OTPScreenState extends State<OTPScreen>
                       ),
                     ),
                     const SizedBox(height: 10),
-                    const Text(
-                      "Enter the 4-digit code sent to your email",
+                    Text(
+                      "Enter the 4-digit code sent to ${widget.email}",
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white70),
+                      style: const TextStyle(color: Colors.white70),
                     ),
                     const SizedBox(height: 28),
 
-                    // ✅ NO OVERFLOW: Row wrapped with SizedBox + spaceEvenly
                     SizedBox(
                       width: double.infinity,
                       child: Row(
                         mainAxisAlignment:
                         MainAxisAlignment.spaceEvenly,
-                        children:
-                        List.generate(4, _otpBox),
+                        children: List.generate(4, _otpBox),
                       ),
                     ),
 
@@ -184,11 +208,22 @@ class _OTPScreenState extends State<OTPScreen>
                             BorderRadius.circular(26),
                           ),
                         ),
-                        onPressed: _verifyOtp,
-                        child: const Text(
+                        onPressed: _loading ? null : _verifyOtp,
+                        child: _loading
+                            ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child:
+                          CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.black,
+                          ),
+                        )
+                            : const Text(
                           "Verify",
-                          style:
-                          TextStyle(fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontWeight:
+                              FontWeight.bold),
                         ),
                       ),
                     ),
@@ -196,8 +231,10 @@ class _OTPScreenState extends State<OTPScreen>
                     const SizedBox(height: 14),
 
                     TextButton(
-                      onPressed: () =>
-                          _showToast("OTP resent"),
+                      onPressed: () {
+                        AppToast.show(
+                            context, "OTP resend feature coming soon");
+                      },
                       child: const Text(
                         "Resend OTP",
                         style: TextStyle(
@@ -215,7 +252,6 @@ class _OTPScreenState extends State<OTPScreen>
     );
   }
 
-  // 🟦 OTP BOX (BORDER + CURSOR COLOR FIXED)
   Widget _otpBox(int index) {
     return SizedBox(
       width: 56,
@@ -226,8 +262,8 @@ class _OTPScreenState extends State<OTPScreen>
         textAlign: TextAlign.center,
         maxLength: 1,
         cursorColor: const Color(0xFF22D3EE),
-        style:
-        const TextStyle(color: Colors.white, fontSize: 20),
+        style: const TextStyle(
+            color: Colors.white, fontSize: 20),
         decoration: InputDecoration(
           counterText: "",
           filled: true,

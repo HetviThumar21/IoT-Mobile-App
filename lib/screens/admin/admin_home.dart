@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sundaram_iot_app/common/%20utils/app_toast.dart';
+import 'package:sundaram_iot_app/common/network/api_service.dart';
 import '../dashboard/alerts_screen.dart';
 import 'admin_user_management.dart';
 import '../../widgets/shift_oee_card.dart';
@@ -8,8 +10,9 @@ import 'daily_downtime_line_chart.dart';
 
 class AdminHome extends StatefulWidget {
   final VoidCallback onProfileTap;
+  final int userId;
 
-  const AdminHome({super.key, required this.onProfileTap});
+  const AdminHome({super.key, required this.onProfileTap,required this.userId});
 
   @override
   State<AdminHome> createState() => _AdminHomeState();
@@ -18,16 +21,48 @@ class AdminHome extends StatefulWidget {
 class _AdminHomeState extends State<AdminHome> {
   bool showPlants = false;
   String selectedPlant = "All Plants";
+  List<Map<String, dynamic>> plants = [];
+  bool isLoadingPlants = false;
 
-  final List<Map<String, String>> plants = [
-    {"name": "All Plants", "lines": "12 lines", "oee": "78.5%"},
-    {"name": "Plant A - North", "lines": "4 lines", "oee": "82.3%"},
-    {"name": "Plant B - South", "lines": "5 lines", "oee": "75.8%"},
-    {"name": "Plant C - East", "lines": "3 lines", "oee": "77.1%"},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    fetchPlants();
+  }
+  Future<void> fetchPlants() async {
+    setState(() => isLoadingPlants = true);
+
+    try {
+      final response = await DioClient().post(
+        '/Plant/list',
+        {
+          "userId": widget.userId,
+        },
+      );
+
+      final data = response.data;
+
+      if (data != null) {
+        setState(() {
+          plants = List<Map<String, dynamic>>.from(data);
+          selectedPlant =
+          plants.isNotEmpty ? plants.first["plantName"] : "";
+        });
+      } else {
+        AppToast.show(context, "No plants found");
+      }
+    } catch (e) {
+      print("Plant API Error: $e");
+      AppToast.show(context, "Unable to fetch plants");
+    } finally {
+      setState(() => isLoadingPlants = false);
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
+    print("userId${widget.userId}");
     return SafeArea(
       child: CustomScrollView(
         slivers: [
@@ -187,7 +222,86 @@ class _AdminHomeState extends State<AdminHome> {
   }
 
   /// ================= PLANT LIST =================
+  // Widget _plantList() {
+  //   return Container(
+  //     decoration: BoxDecoration(
+  //       color: const Color(0xFF020617),
+  //       borderRadius: BorderRadius.circular(16),
+  //       border: Border.all(color: const Color(0xFF1E293B)),
+  //     ),
+  //     child: Column(
+  //       children: plants.map((plant) {
+  //         final isSelected = plant["name"] == selectedPlant;
+  //         return GestureDetector(
+  //           onTap: () {
+  //             setState(() {
+  //               selectedPlant = plant["name"]!;
+  //               showPlants = false;
+  //             });
+  //           },
+  //           child: Container(
+  //             padding: const EdgeInsets.all(14),
+  //             decoration: BoxDecoration(
+  //               color: isSelected
+  //                   ? const Color(0xFF0F2A3C)
+  //                   : Colors.transparent,
+  //             ),
+  //             child: Row(
+  //               children: [
+  //                 Icon(Icons.factory,
+  //                     color: isSelected
+  //                         ? const Color(0xFF22D3EE)
+  //                         : Colors.grey),
+  //                 const SizedBox(width: 12),
+  //                 Expanded(
+  //                   child: Column(
+  //                     crossAxisAlignment: CrossAxisAlignment.start,
+  //                     children: [
+  //                       Text(plant["name"]!,
+  //                           style: TextStyle(
+  //                               color: isSelected
+  //                                   ? const Color(0xFF22D3EE)
+  //                                   : Colors.white,
+  //                               fontWeight: FontWeight.w600)),
+  //                       Text(plant["lines"]!,
+  //                           style: const TextStyle(
+  //                               color: Colors.grey, fontSize: 12)),
+  //                     ],
+  //                   ),
+  //                 ),
+  //                 Column(
+  //                   children: [
+  //                     Text(plant["oee"]!,
+  //                         style: const TextStyle(
+  //                             color: Colors.orange,
+  //                             fontWeight: FontWeight.bold)),
+  //                     const Text("OEE",
+  //                         style:
+  //                         TextStyle(color: Colors.grey, fontSize: 11)),
+  //                   ],
+  //                 )
+  //               ],
+  //             ),
+  //           ),
+  //         );
+  //       }).toList(),
+  //     ),
+  //   );
+  // }
   Widget _plantList() {
+    if (isLoadingPlants) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (plants.isEmpty) {
+      return const Center(
+        child: Text(
+          "No Plants Available",
+          style: TextStyle(color: Colors.grey),
+        ),
+      );
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF020617),
@@ -196,21 +310,20 @@ class _AdminHomeState extends State<AdminHome> {
       ),
       child: Column(
         children: plants.map((plant) {
-          final isSelected = plant["name"] == selectedPlant;
+          final isSelected = plant["plantName"] == selectedPlant;
+
           return GestureDetector(
             onTap: () {
               setState(() {
-                selectedPlant = plant["name"]!;
+                selectedPlant = plant["plantName"];
                 showPlants = false;
               });
             },
             child: Container(
               padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? const Color(0xFF0F2A3C)
-                    : Colors.transparent,
-              ),
+              color: isSelected
+                  ? const Color(0xFF0F2A3C)
+                  : Colors.transparent,
               child: Row(
                 children: [
                   Icon(Icons.factory,
@@ -219,32 +332,16 @@ class _AdminHomeState extends State<AdminHome> {
                           : Colors.grey),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(plant["name"]!,
-                            style: TextStyle(
-                                color: isSelected
-                                    ? const Color(0xFF22D3EE)
-                                    : Colors.white,
-                                fontWeight: FontWeight.w600)),
-                        Text(plant["lines"]!,
-                            style: const TextStyle(
-                                color: Colors.grey, fontSize: 12)),
-                      ],
+                    child: Text(
+                      plant["plantName"],
+                      style: TextStyle(
+                        color: isSelected
+                            ? const Color(0xFF22D3EE)
+                            : Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                  Column(
-                    children: [
-                      Text(plant["oee"]!,
-                          style: const TextStyle(
-                              color: Colors.orange,
-                              fontWeight: FontWeight.bold)),
-                      const Text("OEE",
-                          style:
-                          TextStyle(color: Colors.grey, fontSize: 11)),
-                    ],
-                  )
                 ],
               ),
             ),

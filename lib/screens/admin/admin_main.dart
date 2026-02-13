@@ -11,7 +11,9 @@ import 'admin_reports.dart';
 import 'admin_profile_drawer.dart';
 
 class AdminMain extends StatefulWidget {
-  const AdminMain({super.key});
+  final int userId;
+
+  const AdminMain({Key? key, required this.userId}) : super(key: key);
 
   @override
   State<AdminMain> createState() => _AdminMainState();
@@ -27,25 +29,29 @@ class _AdminMainState extends State<AdminMain> {
   @override
   void initState() {
     super.initState();
+
     _screens = [
       AdminHome(
+        userId: widget.userId,   // 👈 PASS HERE
         onProfileTap: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (
-                  _) => const AdminProfile(), // <-- your AdminProfile screen
+              builder: (_) => AdminProfile(
+                userId: widget.userId,   // 👈 PASS HERE ALSO
+              ),
             ),
           );
         },
       ),
 
-      const AdminDowntime(),
-      const AdminMaintenance(),
-      const AdminLive(),
-      const ReportsScreen(),
+      AdminDowntime(userId: widget.userId),
+      AdminMaintenance(userId: widget.userId),
+      AdminLive(userId: widget.userId),
+      ReportsScreen(userId: widget.userId),
     ];
   }
+
 
   @override
   Widget build(BuildContext context) {

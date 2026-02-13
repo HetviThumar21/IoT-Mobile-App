@@ -3,7 +3,9 @@ import 'package:syncfusion_flutter_charts/charts.dart';
 import '../../widgets/plant_selector.dart';
 
 class AdminLive extends StatefulWidget {
-  const AdminLive({super.key});
+  final int userId;
+
+  const AdminLive({super.key,required this.userId});
 
   @override
   State<AdminLive> createState() => _AdminLiveState();

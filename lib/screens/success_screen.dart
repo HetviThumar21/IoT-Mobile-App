@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'dashboard/dashboard_main.dart';
 
 class SuccessScreen extends StatefulWidget {
-  const SuccessScreen({super.key});
+  final int userId;
+
+  const SuccessScreen({Key? key, required this.userId}) : super(key: key);
 
   @override
   State<SuccessScreen> createState() => _SuccessScreenState();
 }
+
 
 class _SuccessScreenState extends State<SuccessScreen>
     with SingleTickerProviderStateMixin {
@@ -42,6 +45,7 @@ class _SuccessScreenState extends State<SuccessScreen>
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       body: Center(
         child: FadeTransition(
@@ -99,7 +103,7 @@ class _SuccessScreenState extends State<SuccessScreen>
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const DashboardMain(),
+                          builder: (_) => DashboardMain(userId: widget.userId),
                         ),
                       );
                     },

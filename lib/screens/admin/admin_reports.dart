@@ -4,7 +4,9 @@ import 'package:sundaram_iot_app/common/%20utils/app_toast.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
 class ReportsScreen extends StatefulWidget {
-  const ReportsScreen({super.key});
+  final int userId;
+
+  const ReportsScreen({super.key,required this.userId});
 
   @override
   State<ReportsScreen> createState() => _ReportsScreenState();

@@ -5,8 +5,9 @@ import 'operator_maintenance.dart';
 import 'profile_screen_opertaor.dart';
 
 class OperatorDashboard extends StatefulWidget {
-  const OperatorDashboard({super.key});
+  final int userId;
 
+  const OperatorDashboard({Key? key, required this.userId}) : super(key: key);
   @override
   State<OperatorDashboard> createState() => _OperatorDashboardState();
 }

@@ -29,11 +29,15 @@ class AppRoutes {
       case login:
         return AnimatedRoute.slide(const LoginScreen());
 
-      case otp:
-        return AnimatedRoute.slide(const OTPScreen());
+      // case otp:
+      //   return AnimatedRoute.slide(const OTPScreen(email: ,));
 
       case success:
-        return AnimatedRoute.slide(const SuccessScreen());
+        final int userId = settings.arguments as int;
+
+        return AnimatedRoute.slide(
+          SuccessScreen(userId: userId),
+        );
 
     // case dashboard:
     //   return AnimatedRoute.slide(const DashboardScreen());
