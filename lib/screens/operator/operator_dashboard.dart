@@ -7,7 +7,9 @@ import 'profile_screen_opertaor.dart';
 class OperatorDashboard extends StatefulWidget {
   final int userId;
 
-  const OperatorDashboard({Key? key, required this.userId}) : super(key: key);
+  const OperatorDashboard({Key? key, required this.userId})
+      : super(key: key);
+
   @override
   State<OperatorDashboard> createState() => _OperatorDashboardState();
 }
@@ -15,15 +17,16 @@ class OperatorDashboard extends StatefulWidget {
 class _OperatorDashboardState extends State<OperatorDashboard> {
   int _currentIndex = 0;
 
-  // 🔑 SINGLE SOURCE OF TRUTH
-  String selectedPlant = "Plant A - North";
-  String selectedLine = "Line 2";
+  /// 🔑 SINGLE SOURCE OF TRUTH
+  String selectedPlant = "";
+  String selectedLine = "Line 1";
   String selectedBatch = "BATCH-4587";
 
   @override
   Widget build(BuildContext context) {
     final List<Widget> screens = [
       OperatorHome(
+        userId: widget.userId,   // ✅ IMPORTANT FIX
         plant: selectedPlant,
         line: selectedLine,
         batch: selectedBatch,

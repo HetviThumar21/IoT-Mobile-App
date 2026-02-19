@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sundaram_iot_app/common/%20utils/app_toast.dart';
+import 'package:sundaram_iot_app/common/network/api_service.dart';
 import 'package:sundaram_iot_app/screens/dashboard/profile_screen.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:sundaram_iot_app/screens/dashboard/team_screen.dart';
@@ -7,20 +9,55 @@ import 'alerts_screen.dart';
 import 'profile_drawer.dart';
 
 class DashboardHome extends StatefulWidget {
-  const DashboardHome({super.key});
+  final int userId;
+
+   DashboardHome({super.key, required this.userId});
 
   @override
   State<DashboardHome> createState() => _DashboardHomeState();
 }
 
 class _DashboardHomeState extends State<DashboardHome> {
-  String selectedPlant = "Plant A - North";
+  List<Map<String, dynamic>> plants = [];
+  bool isLoadingPlants = false;
+  String selectedPlant = "";
 
-  final plants = [
-    "Plant A - North",
-    "Plant B - South",
-    "Plant C - East",
-  ];
+
+  @override
+  void initState() {
+    super.initState();
+    fetchPlants();
+  }
+  Future<void> fetchPlants() async {
+    setState(() => isLoadingPlants = true);
+
+    try {
+      final response = await DioClient().post(
+        '/Plant/list',
+        {
+          "userId": widget.userId,
+        },
+      );
+
+      final data = response.data;
+
+      if (data != null) {
+        setState(() {
+          plants = List<Map<String, dynamic>>.from(data);
+          selectedPlant =
+          plants.isNotEmpty ? plants.first["plantName"] : "";
+        });
+      } else {
+        AppToast.show(context, "No plants found");
+      }
+    } catch (e) {
+      print("Plant API Error: $e");
+      AppToast.show(context, "Unable to fetch plants");
+    } finally {
+      setState(() => isLoadingPlants = false);
+    }
+  }
+
 
   /// Batch wise data
   final Map<String, List<_BatchData>> batchData = {
@@ -230,7 +267,42 @@ class _DashboardHomeState extends State<DashboardHome> {
     );
   }
 
+  // void _showPlantBottomSheet() {
+  //   showModalBottomSheet(
+  //     context: context,
+  //     backgroundColor: Colors.transparent,
+  //     builder: (_) => Container(
+  //       padding: const EdgeInsets.all(16),
+  //       decoration: const BoxDecoration(
+  //         color: Color(0xFF0B1220),
+  //         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+  //       ),
+  //       child: Column(
+  //         mainAxisSize: MainAxisSize.min,
+  //         children: plants.map((p) {
+  //           return ListTile(
+  //             title: Text(p, style: const TextStyle(color: Colors.white)),
+  //             onTap: () {
+  //               setState(() => selectedPlant = p);
+  //               Navigator.pop(context);
+  //             },
+  //           );
+  //         }).toList(),
+  //       ),
+  //     ),
+  //   );
+  // }
   void _showPlantBottomSheet() {
+    if (isLoadingPlants) {
+      AppToast.show(context, "Loading plants...");
+      return;
+    }
+
+    if (plants.isEmpty) {
+      AppToast.show(context, "No plants available");
+      return;
+    }
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -242,11 +314,16 @@ class _DashboardHomeState extends State<DashboardHome> {
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: plants.map((p) {
+          children: plants.map((plant) {
             return ListTile(
-              title: Text(p, style: const TextStyle(color: Colors.white)),
+              title: Text(
+                plant["plantName"],
+                style: const TextStyle(color: Colors.white),
+              ),
               onTap: () {
-                setState(() => selectedPlant = p);
+                setState(() {
+                  selectedPlant = plant["plantName"];
+                });
                 Navigator.pop(context);
               },
             );
@@ -319,8 +396,8 @@ class _DashboardHomeState extends State<DashboardHome> {
         primaryXAxis: CategoryAxis(),
         series: <CartesianSeries<_BatchData, String>>[
           ColumnSeries<_BatchData, String>(
-            dataSource: batchData[selectedPlant]!,
-            xValueMapper: (d, _) => d.batch,
+            dataSource: batchData[selectedPlant] ?? [],
+          xValueMapper: (d, _) => d.batch,
             yValueMapper: (d, _) => d.units,
             color: const Color(0xFF22D3EE),
           ),
@@ -344,7 +421,7 @@ class _DashboardHomeState extends State<DashboardHome> {
         tooltipBehavior: TooltipBehavior(enable: true),
         series: <CartesianSeries<_LineData, String>>[
           ColumnSeries<_LineData, String>(
-            dataSource: lineData[selectedPlant]!,
+            dataSource: lineData[selectedPlant]??[],
             xValueMapper: (d, _) => d.line,
             yValueMapper: (d, _) => d.units,
             pointColorMapper: (d, index) => colors[index % colors.length],
@@ -358,10 +435,13 @@ class _DashboardHomeState extends State<DashboardHome> {
 
   // ───────── DISPATCH PIE CHART ─────────
   Widget _dispatchChart() {
-    final data = dispatchData[selectedPlant]!;
+    final data = dispatchData[selectedPlant]??[];
+
+    final dispatchedItem = data.where((e) => e.status == "Dispatched").toList();
 
     final int dispatched =
-        data.firstWhere((e) => e.status == "Dispatched").value;
+    dispatchedItem.isNotEmpty ? dispatchedItem.first.value : 0;
+
 
     return _chartCard(
       "Today's Dispatch Status",

@@ -10,7 +10,7 @@ import 'profile_screen.dart';
 class DashboardMain extends StatefulWidget {
   final int userId;
 
-  const DashboardMain({Key? key, required this.userId}) : super(key: key);
+   DashboardMain({Key? key, required this.userId}) : super(key: key);
 
   @override
   State<DashboardMain> createState() => _DashboardMainState();
@@ -19,8 +19,8 @@ class DashboardMain extends StatefulWidget {
 class _DashboardMainState extends State<DashboardMain> {
   int _index = 0;
 
-  final screens = const [
-    DashboardHome(),
+  late final screens =  [
+    DashboardHome(userId: widget.userId),
     DowntimeScreen(),
     MaintenanceScreen(),
     LiveScreen(),
@@ -29,6 +29,8 @@ class _DashboardMainState extends State<DashboardMain> {
 
   @override
   Widget build(BuildContext context) {
+    print("userid..${widget.userId}");
+
     return Scaffold(
       backgroundColor: const Color(0xFF0B1220),
       body: IndexedStack(index: _index, children: screens),
