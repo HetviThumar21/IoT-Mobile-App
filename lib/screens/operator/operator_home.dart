@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sundaram_iot_app/common/%20utils/app_toast.dart';
-import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:sundaram_iot_app/common/network/api_service.dart';
-
+import 'package:syncfusion_flutter_charts/charts.dart';
 class OperatorHome extends StatefulWidget {
   final int userId;
   final String plant;
@@ -24,56 +23,82 @@ class OperatorHome extends StatefulWidget {
 }
 
 class _OperatorHomeState extends State<OperatorHome> {
-  late String selectedPlant;
-  late String selectedLine;
-  late String selectedBatch;
 
-  List<Map<String, dynamic>> plants = [];
-  bool isLoadingPlants = false;
+  String? selectedPlant;
+  String? selectedLine;
+  String? selectedBatch;
 
-  final lines = ["Line 1", "Line 2", "Line 3"];
-  final batches = ["BATCH-4587", "BATCH-4588", "BATCH-4589"];
+  DateTime fromDate = DateTime.now();
+  DateTime toDate = DateTime.now();
+
+  bool isLoadingDashboard = false;
+
+  Map<String, dynamic>? operatorData;
+  List<dynamic> batchSummary = [];
+  List<dynamic> lineProduction = [];
+  List<dynamic> oeeSummary = [];
+
+  List<String> availableLines = [];
+  List<String> availableBatches = [];
 
   @override
   void initState() {
     super.initState();
-    selectedPlant = widget.plant;
-    selectedLine = widget.line;
-    selectedBatch = widget.batch;
-    fetchPlants();
+    fetchDashboardReport();
   }
 
-  // ================= FETCH PLANTS FROM API =================
-  Future<void> fetchPlants() async {
-    setState(() => isLoadingPlants = true);
+  String _formatDate(DateTime date) {
+    return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+  }
+
+  Future<void> fetchDashboardReport() async {
+    setState(() => isLoadingDashboard = true);
 
     try {
       final response = await DioClient().post(
-        '/Plant/list',
+        'operatordashboard/report',
         {
           "userId": widget.userId,
+          "fromDate": _formatDate(fromDate),
+          "toDate": _formatDate(toDate),
         },
       );
 
       final data = response.data;
 
-      if (data != null && data is List) {
-        setState(() {
-          plants = List<Map<String, dynamic>>.from(data);
+      if (data != null && data["success"] == true) {
+        final dashboard = data["data"];
 
-          if (plants.isNotEmpty) {
-            selectedPlant =
-                plants.first["plantName"]?.toString() ?? selectedPlant;
-          }
+        final operator = dashboard["operator"];
+        final batches = dashboard["batchSummary"] ?? [];
+        final lines = dashboard["lineProduction"] ?? [];
+        final oee = dashboard["oeeSummary"] ?? [];
+
+        final uniqueLines = lines
+            .map<String>((e) => "Line ${e["lineId"]}")
+            .toSet()
+            .toList();
+
+        setState(() {
+          operatorData = operator;
+          batchSummary = batches;
+          lineProduction = lines;
+          oeeSummary = oee;
+
+          selectedPlant = operator?["plantName"];
+
+          availableLines = uniqueLines;
+          selectedLine = null;
+          selectedBatch = null;
+          availableBatches = [];
         });
       } else {
-        AppToast.show(context, "No plants found");
+        AppToast.show(context, data?["message"] ?? "Dashboard failed");
       }
     } catch (e) {
-      print("Plant API Error: $e");
-      AppToast.show(context, "Unable to fetch plants");
+      AppToast.show(context, "Unable to fetch dashboard");
     } finally {
-      setState(() => isLoadingPlants = false);
+      setState(() => isLoadingDashboard = false);
     }
   }
 
@@ -90,17 +115,24 @@ class _OperatorHomeState extends State<OperatorHome> {
               _modernHeader(),
               const SizedBox(height: 20),
 
+              _dateSelectionCard(),
+              const SizedBox(height: 16),
+
+
               _dropdownCard(),
               const SizedBox(height: 16),
 
               _contextStickyCard(),
               const SizedBox(height: 16),
 
-              _batchProgressCard(),
+              _oeeChartCard(),
               const SizedBox(height: 16),
 
-              _aggregationStatusCard(),
+              _batchProgressCard(),
+              // _oeeChartCard(),
               const SizedBox(height: 40),
+
+
             ],
           ),
         ),
@@ -108,7 +140,68 @@ class _OperatorHomeState extends State<OperatorHome> {
     );
   }
 
+  // ================= DATE CARD =================
+
+  Widget _dateSelectionCard() {
+    return _glassCard(
+      title: "DATE RANGE",
+      trailing: IconButton(
+        icon: const Icon(Icons.refresh, color: Colors.cyanAccent),
+        onPressed: fetchDashboardReport,
+      ),
+      child: Row(
+        children: [
+          Expanded(child: _dateField("From", fromDate, true)),
+          const SizedBox(width: 12),
+          Expanded(child: _dateField("To", toDate, false)),
+        ],
+      ),
+    );
+  }
+
+  Widget _dateField(String label, DateTime date, bool isFrom) {
+    return InkWell(
+      onTap: () async {
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: date,
+          firstDate: DateTime(2020),
+          lastDate: DateTime(2100),
+        );
+
+        if (picked != null) {
+          setState(() {
+            if (isFrom) {
+              fromDate = picked;
+            } else {
+              toDate = picked;
+            }
+          });
+          fetchDashboardReport();
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0B1220),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFF22D3EE)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            const SizedBox(height: 4),
+            Text(_formatDate(date),
+                style: const TextStyle(color: Colors.white)),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ================= MODERN HEADER =================
+
   Widget _modernHeader() {
     return Container(
       padding: const EdgeInsets.all(18),
@@ -151,9 +244,9 @@ class _OperatorHomeState extends State<OperatorHome> {
             spacing: 8,
             runSpacing: 6,
             children: [
-              _contextChip(selectedPlant),
-              _contextChip(selectedLine),
-              _contextChip(selectedBatch),
+              _contextChip(selectedPlant ?? "-"),
+              _contextChip(selectedLine ?? "-"),
+              _contextChip(selectedBatch ?? "-"),
             ],
           )
         ],
@@ -169,138 +262,239 @@ class _OperatorHomeState extends State<OperatorHome> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFF22D3EE), width: 0.8),
       ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
+      child: Text(text,
+          style: const TextStyle(color: Colors.white, fontSize: 12)),
+    );
+  }
+
+  // ================= DROPDOWN CARD =================
+
+  Widget _dropdownCard() {
+    if (selectedPlant == null) {
+      return _glassCard(
+        title: "SELECTION",
+        child: const Text("No Plant Assigned",
+            style: TextStyle(color: Colors.white)),
+      );
+    }
+
+    return _glassCard(
+      title: "SELECTION",
+      child: Column(
+        children: [
+
+          _infoRow("Plant", selectedPlant!),
+          const SizedBox(height: 12),
+
+          DropdownButtonFormField<String>(
+            value: selectedLine,
+            dropdownColor: const Color(0xFF0B1220),
+            decoration: _inputDecoration("Line"),
+            style: const TextStyle(color: Colors.white),
+            items: availableLines
+                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                .toList(),
+            onChanged: (v) {
+              if (v == null) return;
+
+              final lineId = int.parse(v.replaceAll("Line ", ""));
+
+              final filteredBatches = batchSummary
+                  .where((b) => lineProduction.any((l) =>
+              l["lineId"] == lineId &&
+                  l["batchNumber"] == b["batchNumber"]))
+                  .map<String>((e) => e["batchNumber"].toString())
+                  .toSet()
+                  .toList();
+
+              setState(() {
+                selectedLine = v;
+                availableBatches = filteredBatches;
+                selectedBatch = null;
+              });
+            },
+          ),
+
+          const SizedBox(height: 12),
+
+          DropdownButtonFormField<String>(
+            value: selectedBatch,
+            dropdownColor: const Color(0xFF0B1220),
+            decoration: _inputDecoration("Batch"),
+            style: const TextStyle(color: Colors.white),
+            items: availableBatches
+                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                .toList(),
+            onChanged: selectedLine == null
+                ? null
+                : (v) {
+              setState(() => selectedBatch = v);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ================= CONTEXT =================
+
+  Widget _contextStickyCard() {
+
+    int batchSize = 0;
+
+    if (selectedBatch != null) {
+      final filtered = batchSummary
+          .where((e) => e["batchNumber"] == selectedBatch)
+          .toList();
+
+      batchSize = filtered.fold<int>(
+          0, (sum, e) => sum + ((e["batchSize"] as num?)?.toInt() ?? 0));
+    }
+
+    return _glassCard(
+      title: "CURRENT CONTEXT",
+      child: Column(
+        children: [
+          _infoRow("Plant", selectedPlant ?? "-"),
+          _infoRow("Line", selectedLine ?? "-"),
+          _infoRow("Operator", operatorData?["fullName"] ?? "-"),
+          _infoRow("Batch ID", selectedBatch ?? "-"),
+          _infoRow("Batch Size", batchSize == 0 ? "-" : batchSize.toString()),
+        ],
+      ),
+    );
+  }
+
+
+  Widget _oeeChartCard() {
+
+    if (selectedLine == null) {
+      return _glassCard(
+        title: "OEE SUMMARY",
+        child: const Text(
+          "Select Line to View OEE",
+          style: TextStyle(color: Colors.white),
+        ),
+      );
+    }
+
+    final lineId = int.parse(selectedLine!.replaceAll("Line ", ""));
+
+    final filteredOee = oeeSummary
+        .where((e) =>
+    e["lineNumber"] == lineId &&
+        _isWithinSelectedDate(e["eventDate"]))
+        .toList();
+
+    if (filteredOee.isEmpty) {
+      return _glassCard(
+        title: "OEE SUMMARY",
+        child: const Text(
+          "No OEE Data",
+          style: TextStyle(color: Colors.white),
+        ),
+      );
+    }
+
+    return _glassCard(
+      title: "OEE SUMMARY",
+      child: SizedBox(
+        height: 300,
+        child: SfCartesianChart(
+          backgroundColor: Colors.transparent,
+          primaryXAxis: CategoryAxis(),
+          legend: Legend(isVisible: true),
+          tooltipBehavior: TooltipBehavior(enable: true),
+          series: <CartesianSeries>[
+            ColumnSeries<dynamic, String>(
+              name: "Planned",
+              dataSource: filteredOee,
+              xValueMapper: (data, _) =>
+                  data["eventDate"].toString().substring(0, 10),
+              yValueMapper: (data, _) =>
+              (data["plannedDowntimeMinutes"] as num?)?.toDouble() ?? 0,
+              color: Colors.green,
+            ),
+            ColumnSeries<dynamic, String>(
+              name: "Unplanned",
+              dataSource: filteredOee,
+              xValueMapper: (data, _) =>
+                  data["eventDate"].toString().substring(0, 10),
+              yValueMapper: (data, _) =>
+              (data["unplannedDowntimeMinutes"] as num?)?.toDouble() ?? 0,
+              color: Colors.red,
+            ),
+            ColumnSeries<dynamic, String>(
+              name: "Total",
+              dataSource: filteredOee,
+              xValueMapper: (data, _) =>
+                  data["eventDate"].toString().substring(0, 10),
+              yValueMapper: (data, _) =>
+              (data["totalDowntimeMinutes"] as num?)?.toDouble() ?? 0,
+              color: Colors.orange,
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // ================= DROPDOWN CARD (UPDATED PLANT ONLY) =================
-  Widget _dropdownCard() {
-    return _glassCard(
-      title: "SELECTION",
-      child: Column(
-        children: [
-          DropdownButtonFormField<String>(
-            value: selectedPlant.isEmpty ? null : selectedPlant,
-            dropdownColor: const Color(0xFF0B1220),
-            decoration: _inputDecoration("Plant"),
-            style: const TextStyle(color: Colors.white),
-            items: plants
-                .map<DropdownMenuItem<String>>((p) {
-              final plantName = p["plantName"]?.toString() ?? "";
-              return DropdownMenuItem<String>(
-                value: plantName,
-                child: Text(plantName),
-              );
-            }).toList(),
-            onChanged: (v) {
-              if (v == null) return;
-              setState(() => selectedPlant = v);
-              widget.onContextChanged(
-                  selectedPlant, selectedLine, selectedBatch);
-            },
-          ),
-          const SizedBox(height: 12),
-          _dropdown("Line", selectedLine, lines, (v) {
-            setState(() => selectedLine = v);
-            widget.onContextChanged(
-                selectedPlant, selectedLine, selectedBatch);
-          }),
-          const SizedBox(height: 12),
-          _dropdown("Batch", selectedBatch, batches, (v) {
-            setState(() => selectedBatch = v);
-            widget.onContextChanged(
-                selectedPlant, selectedLine, selectedBatch);
-          }),
-        ],
-      ),
-    );
+  bool _isWithinSelectedDate(String eventDate) {
+    final event = DateTime.parse(eventDate);
+
+    return event.isAfter(fromDate.subtract(const Duration(days: 1))) &&
+        event.isBefore(toDate.add(const Duration(days: 1)));
   }
 
-  Widget _dropdown(
-      String label,
-      String value,
-      List<String> items,
-      ValueChanged<String> onChanged) {
-    return DropdownButtonFormField<String>(
-      value: value,
-      dropdownColor: const Color(0xFF0B1220),
-      decoration: _inputDecoration(label),
-      style: const TextStyle(color: Colors.white),
-      items: items
-          .map((e) => DropdownMenuItem<String>(
-        value: e,
-        child: Text(e),
-      ))
-          .toList(),
-      onChanged: (v) => onChanged(v!),
-    );
-  }
+  // ================= BATCH PROGRESS =================
 
-  // ================= CONTEXT CARD =================
-  Widget _contextStickyCard() {
-    return _glassCard(
-      title: "CURRENT CONTEXT",
-      child: Column(
-        children: [
-          _infoRow("Plant", selectedPlant),
-          _infoRow("Line", selectedLine),
-          _infoRow("Shift", "06:00 - 14:00"),
-          _infoRow("Operator", "OPR-102"),
-          const Divider(color: Colors.white24),
-          _infoRow("Batch ID", selectedBatch),
-          _infoRow("Brand / SKU", "Royal Classic"),
-          _infoRow("Bottle Size", "750 ml"),
-          _infoRow("Bottles / Case", "12"),
-        ],
-      ),
-    );
-  }
-
-  // ================= REST OF YOUR ORIGINAL UI (UNCHANGED) =================
   Widget _batchProgressCard() {
-    const status = "Running";
+    if (selectedBatch == null) {
+      return _glassCard(
+        title: "BATCH PROGRESS",
+        child: const Text("No Batch Selected",
+            style: TextStyle(color: Colors.white)),
+      );
+    }
+
+    final filtered = batchSummary
+        .where((e) => e["batchNumber"] == selectedBatch)
+        .toList();
+
+    final target = filtered.fold<int>(
+        0, (sum, e) => sum + ((e["batchSize"] as num?)?.toInt() ?? 0));
+
+    final produced = filtered.fold<int>(
+        0, (sum, e) => sum + ((e["totalProduced"] as num?)?.toInt() ?? 0));
+
+    final remaining = filtered.fold<int>(
+        0, (sum, e) => sum + ((e["remainingQuantity"] as num?)?.toInt() ?? 0));
+
     return _glassCard(
       title: "BATCH PROGRESS",
-      trailing: Chip(
-        label: const Text(status, style: TextStyle(color: Colors.white)),
-        backgroundColor: Colors.green.withOpacity(0.25),
-      ),
-      child: const Row(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _Metric(label: "Target", value: "1200"),
-          _Metric(label: "Completed", value: "860"),
-          _Metric(label: "Pending", value: "340"),
+          _Metric(label: "Target", value: target.toString()),
+          _Metric(label: "Produced", value: produced.toString()),
+          _Metric(label: "Remaining", value: remaining.toString()),
         ],
       ),
     );
   }
 
   Widget _aggregationStatusCard() {
-    const int expectedBottles = 12;
-    const int scannedBottles = 10;
-    const int remainingBottles = expectedBottles - scannedBottles;
-
     return _glassCard(
       title: "LIVE AGGREGATION STATUS",
-      child: const Text(
-        "Aggregation UI (unchanged)",
-        style: TextStyle(color: Colors.white),
-      ),
+      child: const Text("Aggregation UI (unchanged)",
+          style: TextStyle(color: Colors.white)),
     );
   }
 
   Widget _glassCard({
     required String title,
-    Widget? trailing,
     required Widget child,
+    Widget? trailing,
   }) {
     return Container(
       padding: const EdgeInsets.all(18),
@@ -335,8 +529,8 @@ class _OperatorHomeState extends State<OperatorHome> {
           Text(label, style: const TextStyle(color: Colors.grey)),
           const Spacer(),
           Text(value,
-              style:
-              const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.w600)),
         ],
       ),
     );

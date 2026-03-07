@@ -111,14 +111,14 @@ class _OTPScreenState extends State<OTPScreen>
         // }
 
         if (roleId == 11) {
-          nextScreen = AdminMain( userId: userId,);      // Admin
+          nextScreen = AdminMain( userId: userId,username: "admin");      // Admin
         } else if (roleId == 14) {
-          nextScreen =  DashboardMain(userId: userId,); // Supervisor
+          nextScreen =  DashboardMain(userId: userId,username: "supervisor",); // Supervisor
         } else if (roleId == 15) {
           nextScreen =  OperatorDashboard(userId: userId,);   // Operator
         }
         else {
-          nextScreen =  DashboardMain(userId: userId,);       // Default
+          nextScreen =  DashboardMain(userId: userId,username: "supervisor",);       // Default
         }
 
         Navigator.pushAndRemoveUntil(

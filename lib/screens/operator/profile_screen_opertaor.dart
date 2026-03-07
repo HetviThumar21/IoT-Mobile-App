@@ -1,30 +1,60 @@
 import 'package:flutter/material.dart';
+import 'package:sundaram_iot_app/common/%20utils/app_toast.dart';
+import 'package:sundaram_iot_app/common/network/api_service.dart';
 import 'package:sundaram_iot_app/screens/login_screen.dart';
 
-class OperatorProfile extends StatelessWidget {
-  const OperatorProfile({super.key});
+class OperatorProfile extends StatefulWidget {
+  final int userId;
 
-  // 🔹 Future-ready user data
-  final Map<String, String> user = const {
-    "name": "Rajesh Kumar",
-    "role": "Plant Operator",
-    "empId": "EMP-2024-0156",
-    "email": "rajesh.kumar@company.com",
-    "phone": "+91 98765 43210",
-    "department": "Production",
-    "plant": "Plant A - Mumbai",
-    "shift": "Day Shift (6:00 AM - 2:00 PM)",
-    "joined": "Jan 12, 2022",
-  };
+  const OperatorProfile({super.key, required this.userId});
 
-  final Map<String, String> stats = const {
-    "days": "892",
-    "shifts": "1,284",
-    "issues": "156",
-  };
+  @override
+  State<OperatorProfile> createState() => _OperatorProfileState();
+}
+
+class _OperatorProfileState extends State<OperatorProfile> {
+
+  Map<String, dynamic>? userData;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchUserProfile();
+  }
+
+  Future<void> fetchUserProfile() async {
+    try {
+      final response =
+      await DioClient().get('getuserprofile/${widget.userId}');
+
+      final data = response.data;
+
+      if (data != null && data["success"] == true) {
+        setState(() {
+          userData = data["data"];
+          isLoading = false;
+        });
+      } else {
+        AppToast.show(context, data?["message"] ?? "Failed to load profile");
+        setState(() => isLoading = false);
+      }
+    } catch (e) {
+      AppToast.show(context, "Unable to fetch profile");
+      setState(() => isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+
+    if (isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF0B1220),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFF0B1220),
       body: SafeArea(
@@ -49,6 +79,7 @@ class OperatorProfile extends StatelessWidget {
   }
 
   // ───────── HEADER ─────────
+
   Widget _header() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -72,101 +103,142 @@ class OperatorProfile extends StatelessWidget {
   }
 
   // ───────── PROFILE CARD ─────────
+
   Widget _profileCard() {
+    final name = userData?["fullName"] ?? "-";
+    final designation = userData?["designationName"] ?? "-";
+    final roleName = userData?["roleName"] ?? "-";
+    final username = userData?["username"] ?? "-";
+
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF0F1C2E), Color(0xFF060B16)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF22D3EE).withOpacity(0.08),
+            blurRadius: 25,
+            spreadRadius: 2,
+          ),
+        ],
       ),
       child: Column(
         children: [
-          CircleAvatar(
-            radius: 38,
-            backgroundColor: const Color(0xFF22D3EE),
-            child: const Text(
-              "RK",
-              style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(user["name"]!,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
+
+          // 🔹 Avatar with Glow Ring
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
-              color: const Color(0xFF22D3EE).withOpacity(0.2),
-              borderRadius: BorderRadius.circular(20),
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                colors: [Color(0xFF22D3EE), Color(0xFF0EA5E9)],
+              ),
             ),
-            child: Text(user["role"]!,
-                style: const TextStyle(color: Color(0xFF22D3EE))),
+            child: CircleAvatar(
+              radius: 42,
+              backgroundColor: const Color(0xFF0B1220),
+              child: Text(
+                name.isNotEmpty ? name[0].toUpperCase() : "-",
+                style: const TextStyle(
+                  color: Color(0xFF22D3EE),
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
           ),
+
+          const SizedBox(height: 18),
+
+          // 🔹 Full Name
+          Text(
+            name,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
+          ),
+
           const SizedBox(height: 6),
-          Text(user["empId"]!,
-              style: const TextStyle(color: Colors.grey)),
-          const SizedBox(height: 20),
-          _statsRow(),
+
+          // 🔹 Designation Badge
+          Container(
+            padding:
+            const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF22D3EE), Color(0xFF06B6D4)],
+              ),
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: Text(
+              designation,
+              style: const TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          // 🔹 Divider Line
+          Container(
+            height: 1,
+            width: double.infinity,
+            color: Colors.white.withOpacity(0.08),
+          ),
+
+          const SizedBox(height: 14),
+
+          // 🔹 Role + Username Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _miniInfo("Role", roleName),
+              _miniInfo("Username", username),
+            ],
+          ),
         ],
       ),
     );
   }
-
-  // ───────── STATS ─────────
-  Widget _statsRow() {
-    return Row(
+  Widget _miniInfo(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _statCard("Days Active", stats["days"]!),
-        const SizedBox(width: 10),
-        _statCard("Shifts Completed", stats["shifts"]!),
-        const SizedBox(width: 10),
-        _statCard("Issues Resolved", stats["issues"]!),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.grey,
+            fontSize: 11,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _statCard(String label, String value) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0B1220),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          children: [
-            Text(value,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18)),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              maxLines: 1,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.grey,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   // ───────── PERSONAL INFO ─────────
+
   Widget _personalInfo() {
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -183,12 +255,27 @@ class OperatorProfile extends StatelessWidget {
                   color: Colors.grey,
                   fontWeight: FontWeight.bold)),
           const SizedBox(height: 14),
-          _infoRow(Icons.email, "Email", user["email"]!),
-          _infoRow(Icons.phone, "Phone", user["phone"]!),
-          _infoRow(Icons.business, "Department", user["department"]!),
-          _infoRow(Icons.location_on, "Plant Location", user["plant"]!),
-          _infoRow(Icons.schedule, "Current Shift", user["shift"]!),
-          _infoRow(Icons.calendar_today, "Joined", user["joined"]!),
+
+          _infoRow(Icons.email, "Email",
+              userData?["email"] ?? "-"),
+
+          _infoRow(Icons.phone, "Mobile",
+              userData?["mobileNo"] ?? "-"),
+
+          _infoRow(Icons.badge, "Role",
+              userData?["roleName"] ?? "-"),
+
+          _infoRow(Icons.work, "Designation",
+              userData?["designationName"] ?? "-"),
+
+          _infoRow(Icons.security, "Scope",
+              userData?["userScope"] ?? "-"),
+
+          _infoRow(Icons.verified_user, "Active",
+              userData?["isActive"] == true ? "Yes" : "No"),
+
+          _infoRow(Icons.login, "First Login",
+              userData?["isFirstLogin"] == true ? "Yes" : "No"),
         ],
       ),
     );
@@ -206,8 +293,8 @@ class OperatorProfile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
-                    style:
-                    const TextStyle(color: Colors.grey, fontSize: 12)),
+                    style: const TextStyle(
+                        color: Colors.grey, fontSize: 12)),
                 Text(value,
                     style: const TextStyle(color: Colors.white)),
               ],
@@ -219,6 +306,7 @@ class OperatorProfile extends StatelessWidget {
   }
 
   // ───────── LOGOUT ─────────
+
   Widget _logoutButton(BuildContext context) {
     return SizedBox(
       width: double.infinity,
@@ -227,8 +315,8 @@ class OperatorProfile extends StatelessWidget {
           foregroundColor: Colors.redAccent,
           side: const BorderSide(color: Colors.redAccent),
           padding: const EdgeInsets.symmetric(vertical: 14),
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18)),
         ),
         onPressed: () {
           Navigator.pushReplacement(
@@ -246,6 +334,7 @@ class OperatorProfile extends StatelessWidget {
   }
 
   // ───────── VERSION ─────────
+
   Widget _versionInfo() {
     return const Text(
       "OEE Monitor v1.0.0 • Build 2024.01",

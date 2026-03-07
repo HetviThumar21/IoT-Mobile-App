@@ -9,8 +9,9 @@ import 'profile_screen.dart';
 
 class DashboardMain extends StatefulWidget {
   final int userId;
+  final String username;
 
-   DashboardMain({Key? key, required this.userId}) : super(key: key);
+   DashboardMain({Key? key, required this.userId, required this.username}) : super(key: key);
 
   @override
   State<DashboardMain> createState() => _DashboardMainState();
@@ -20,7 +21,7 @@ class _DashboardMainState extends State<DashboardMain> {
   int _index = 0;
 
   late final screens =  [
-    DashboardHome(userId: widget.userId),
+    DashboardHome(userId: widget.userId, username: widget.username),
     DowntimeScreen(),
     MaintenanceScreen(),
     LiveScreen(),

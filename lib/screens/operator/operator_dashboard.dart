@@ -40,7 +40,8 @@ class _OperatorDashboardState extends State<OperatorDashboard> {
       ),
       OperatorDowntime(),
       const OperatorMaintenance(),
-      const OperatorProfile(),
+      OperatorProfile(userId: widget.userId,),
+
     ];
 
     return Scaffold(

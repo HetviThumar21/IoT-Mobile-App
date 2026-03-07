@@ -1,32 +1,60 @@
 import 'package:flutter/material.dart';
+import 'package:sundaram_iot_app/common/%20utils/app_toast.dart';
+import 'package:sundaram_iot_app/common/network/api_service.dart';
 import 'package:sundaram_iot_app/screens/login_screen.dart';
 
-class AdminProfile extends StatelessWidget {
+class AdminProfile extends StatefulWidget {
   final int userId;
 
-  const AdminProfile({super.key,required this.userId});
+  const AdminProfile({super.key, required this.userId});
 
-  // 🔹 Example admin data (replace with API response)
-  final Map<String, String> user = const {
-    "name": "Rajesh Patel",
-    "role": "Plant Head",
-    "username": "planthead_tata",
-    "email": "planthead@tata.com",
-    "phone": "+91 9111111111",
-    "designation": "Quality Engineer",
-    "scope": "CUSTOMER",
-    "entityId": "1",
-    "joined": "Jan 12, 2022",
-  };
+  @override
+  State<AdminProfile> createState() => _AdminProfileState();
+}
 
-  final Map<String, String> stats = const {
-    "lastLogin": "Feb 01, 2026",
-    "active": "Yes",
-    "token": "TEMP_JWT_TOKEN",
-  };
+class _AdminProfileState extends State<AdminProfile> {
+
+  Map<String, dynamic>? userData;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchUserProfile();
+  }
+
+  Future<void> fetchUserProfile() async {
+    try {
+      final response =
+      await DioClient().get('getuserprofile/${widget.userId}');
+
+      final data = response.data;
+
+      if (data != null && data["success"] == true) {
+        setState(() {
+          userData = data["data"];
+          isLoading = false;
+        });
+      } else {
+        AppToast.show(context, data?["message"] ?? "Failed to load profile");
+        setState(() => isLoading = false);
+      }
+    } catch (e) {
+      AppToast.show(context, "Unable to fetch profile");
+      setState(() => isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+
+    if (isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF0B1220),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFF0B1220),
       body: SafeArea(
@@ -51,10 +79,11 @@ class AdminProfile extends StatelessWidget {
   }
 
   // ───────── HEADER ─────────
+
   Widget _header() {
-    return Row(
+    return const Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: const [
+      children: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -68,104 +97,146 @@ class AdminProfile extends StatelessWidget {
                 style: TextStyle(color: Colors.grey)),
           ],
         ),
-
       ],
     );
   }
 
-  // ───────── PROFILE CARD ─────────
+  // ───────── PROFILE CARD (Premium Style) ─────────
+
   Widget _profileCard() {
+    final name = userData?["fullName"] ?? "-";
+    final designation = userData?["designationName"] ?? "-";
+    final roleName = userData?["roleName"] ?? "-";
+    final username = userData?["username"] ?? "-";
+
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF0F1C2E), Color(0xFF060B16)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF22D3EE).withOpacity(0.08),
+            blurRadius: 25,
+            spreadRadius: 2,
+          ),
+        ],
       ),
       child: Column(
         children: [
-          CircleAvatar(
-            radius: 38,
-            backgroundColor: const Color(0xFF22D3EE),
-            child: Text(
-              user["name"]!.substring(0, 2).toUpperCase(),
-              style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(user["name"]!,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
+
+          // 🔹 Avatar with Gradient Glow Ring
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFF22D3EE).withOpacity(0.2),
-              borderRadius: BorderRadius.circular(20),
+            padding: const EdgeInsets.all(3),
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [Color(0xFF22D3EE), Color(0xFF0EA5E9)],
+              ),
             ),
-            child: Text(user["role"]!,
-                style: const TextStyle(color: Color(0xFF22D3EE))),
+            child: CircleAvatar(
+              radius: 42,
+              backgroundColor: const Color(0xFF0B1220),
+              child: Text(
+                name.isNotEmpty ? name[0].toUpperCase() : "-",
+                style: const TextStyle(
+                  color: Color(0xFF22D3EE),
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
           ),
+
+          const SizedBox(height: 18),
+
+          // 🔹 Full Name
+          Text(
+            name,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
+          ),
+
           const SizedBox(height: 6),
 
-          _statsRow(),
+          // 🔹 Designation Badge
+          Container(
+            padding:
+            const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF22D3EE), Color(0xFF06B6D4)],
+              ),
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: Text(
+              designation,
+              style: const TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          // 🔹 Divider
+          Container(
+            height: 1,
+            width: double.infinity,
+            color: Colors.white.withOpacity(0.08),
+          ),
+
+          const SizedBox(height: 14),
+
+          // 🔹 Role + Username
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _miniInfo("Role", roleName),
+              _miniInfo("Username", username),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  // ───────── STATS ─────────
-  Widget _statsRow() {
-    return Row(
+  Widget _miniInfo(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // _statCard("Last Login", stats["lastLogin"]!),
-        // const SizedBox(width: 10),
-        // _statCard("Active", stats["active"]!),
-        // const SizedBox(width: 10),
-        // _statCard("Token", stats["token"]!.substring(0, 8) + "..."),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.grey,
+            fontSize: 11,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _statCard(String label, String value) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0B1220),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          children: [
-            Text(value,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16)),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              maxLines: 1,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.grey,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   // ───────── PERSONAL INFO ─────────
+
   Widget _personalInfo() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -183,11 +254,24 @@ class AdminProfile extends StatelessWidget {
                   color: Colors.grey,
                   fontWeight: FontWeight.bold)),
           const SizedBox(height: 14),
-          _infoRow(Icons.email, "Email", user["email"]!),
-          _infoRow(Icons.phone, "Phone", user["phone"]!),
-          _infoRow(Icons.work, "Designation", user["designation"]!),
-          _infoRow(Icons.security, "Role", user["role"]!),
 
+          _infoRow(Icons.email, "Email",
+              userData?["email"] ?? "-"),
+
+          _infoRow(Icons.phone, "Mobile",
+              userData?["mobileNo"] ?? "-"),
+
+          _infoRow(Icons.security, "Role",
+              userData?["roleName"] ?? "-"),
+
+          _infoRow(Icons.work, "Designation",
+              userData?["designationName"] ?? "-"),
+
+          _infoRow(Icons.badge, "Scope",
+              userData?["userScope"] ?? "-"),
+
+          _infoRow(Icons.verified_user, "Active",
+              userData?["isActive"] == true ? "Yes" : "No"),
         ],
       ),
     );
@@ -218,6 +302,7 @@ class AdminProfile extends StatelessWidget {
   }
 
   // ───────── LOGOUT ─────────
+
   Widget _logoutButton(BuildContext context) {
     return SizedBox(
       width: double.infinity,
@@ -244,7 +329,6 @@ class AdminProfile extends StatelessWidget {
     );
   }
 
-  // ───────── VERSION ─────────
   Widget _versionInfo() {
     return const Text(
       "OEE Monitor v1.0.0 • Build 2026.01",

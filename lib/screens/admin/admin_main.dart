@@ -12,8 +12,9 @@ import 'admin_profile_drawer.dart';
 
 class AdminMain extends StatefulWidget {
   final int userId;
+  final String username;
 
-  const AdminMain({Key? key, required this.userId}) : super(key: key);
+  const AdminMain({Key? key, required this.userId , required this.username}) : super(key: key);
 
   @override
   State<AdminMain> createState() => _AdminMainState();
@@ -33,6 +34,7 @@ class _AdminMainState extends State<AdminMain> {
     _screens = [
       AdminHome(
         userId: widget.userId,   // 👈 PASS HERE
+        username: widget.username,   // 👈 PASS HERE
         onProfileTap: () {
           Navigator.push(
             context,

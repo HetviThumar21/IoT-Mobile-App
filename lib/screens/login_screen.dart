@@ -3,11 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sundaram_iot_app/common/%20utils/app_toast.dart' show AppToast;
 import 'package:sundaram_iot_app/common/network/api_service.dart' show ApiService;
-
 import 'package:sundaram_iot_app/core/constant/GridBackground.dart';
 import 'package:sundaram_iot_app/common/network/api_service.dart';
 import 'package:sundaram_iot_app/screens/admin/admin_main.dart';
-
 import 'dashboard/dashboard_main.dart';
 import 'operator/operator_dashboard.dart';
 import 'otp_screen.dart';
@@ -114,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen>
 
     try {
       final response = await DioClient().post(
-        '/login',
+        'auth/login',
         {
           "loginName": username,
           "password": password,
@@ -130,6 +128,7 @@ class _LoginScreenState extends State<LoginScreen>
 
         final int roleId = user["roleId"] ?? 0;
         final int userId = user["userId"] ?? 0;
+        final String username  = user["username"] ?? 0;
         final String roleName = user["roleName"] ?? "";
 
         /// 🔐 Save token & user info securely
@@ -146,14 +145,14 @@ class _LoginScreenState extends State<LoginScreen>
         Widget nextScreen;
 
         if (roleId == 11) {
-          nextScreen = AdminMain( userId: userId,);      // Admin
+          nextScreen = AdminMain( userId: userId, username: username);      // Admin
         } else if (roleId == 14) {
-          nextScreen =  DashboardMain(userId: userId,); // Supervisor
+          nextScreen =  DashboardMain(userId: userId,username: username,); // Supervisor
         } else if (roleId == 15) {
           nextScreen =  OperatorDashboard(userId: userId,);   // Operator
         }
         else {
-          nextScreen =  DashboardMain(userId: userId,);       // Default
+          nextScreen =  DashboardMain(userId: userId,username: username,);       // Default
         }
 
         Navigator.pushReplacement(

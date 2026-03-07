@@ -100,12 +100,12 @@ class _SuccessScreenState extends State<SuccessScreen>
                   height: 48,
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => DashboardMain(userId: widget.userId),
-                        ),
-                      );
+                      // Navigator.pushReplacement(
+                      //   context,
+                      //   MaterialPageRoute(
+                      //     builder: (_) => DashboardMain(userId: widget.userId),
+                      //   ),
+                      // );
                     },
                     child: const Text("Go to Dashboard"),
                   ),

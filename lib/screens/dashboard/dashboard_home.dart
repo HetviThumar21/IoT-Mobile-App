@@ -10,8 +10,9 @@ import 'profile_drawer.dart';
 
 class DashboardHome extends StatefulWidget {
   final int userId;
+  final String username;
 
-   DashboardHome({super.key, required this.userId});
+   DashboardHome({super.key, required this.userId, required this.username});
 
   @override
   State<DashboardHome> createState() => _DashboardHomeState();
@@ -21,7 +22,17 @@ class _DashboardHomeState extends State<DashboardHome> {
   List<Map<String, dynamic>> plants = [];
   bool isLoadingPlants = false;
   String selectedPlant = "";
+  DateTime fromDate = DateTime.now();
+  DateTime toDate = DateTime.now();
 
+  int? selectedPlantId;
+
+  bool isLoadingDashboard = false;
+
+  List<dynamic> lineProduction = [];
+  List<dynamic> downtime = [];
+  List<dynamic> dispatchSummary = [];
+  Map<String, dynamic>? batchSummary;
 
   @override
   void initState() {
@@ -32,26 +43,19 @@ class _DashboardHomeState extends State<DashboardHome> {
     setState(() => isLoadingPlants = true);
 
     try {
-      final response = await DioClient().post(
-        '/Plant/list',
-        {
-          "userId": widget.userId,
-        },
-      );
+      final response =
+      await DioClient().get('userplants/${widget.userId}');
 
       final data = response.data;
 
-      if (data != null) {
+      if (data != null && data is List) {
         setState(() {
           plants = List<Map<String, dynamic>>.from(data);
-          selectedPlant =
-          plants.isNotEmpty ? plants.first["plantName"] : "";
         });
       } else {
         AppToast.show(context, "No plants found");
       }
     } catch (e) {
-      print("Plant API Error: $e");
       AppToast.show(context, "Unable to fetch plants");
     } finally {
       setState(() => isLoadingPlants = false);
@@ -59,62 +63,7 @@ class _DashboardHomeState extends State<DashboardHome> {
   }
 
 
-  /// Batch wise data
-  final Map<String, List<_BatchData>> batchData = {
-    "Plant A - North": [
-      _BatchData("B1", 1200),
-      _BatchData("B2", 980),
-      _BatchData("B3", 1450),
-    ],
-    "Plant B - South": [
-      _BatchData("B1", 860),
-      _BatchData("B2", 1120),
-      _BatchData("B3", 940),
-    ],
-    "Plant C - East": [
-      _BatchData("B1", 1500),
-      _BatchData("B2", 1380),
-      _BatchData("B3", 1600),
-    ],
-  };
 
-  /// Line wise production data
-  final Map<String, List<_LineData>> lineData = {
-    "Plant A - North": [
-      _LineData("Line 1", 420),
-      _LineData("Line 2", 380),
-      _LineData("Line 3", 460),
-    ],
-    "Plant B - South": [
-      _LineData("Line 1", 310),
-      _LineData("Line 2", 360),
-      _LineData("Line 3", 340),
-    ],
-    "Plant C - East": [
-      _LineData("Line 1", 480),
-      _LineData("Line 2", 520),
-      _LineData("Line 3", 500),
-    ],
-  };
-
-  /// Dispatch data (today)
-  final Map<String, List<_DispatchData>> dispatchData = {
-    "Plant A - North": [
-      _DispatchData("Dispatched", 820, Color(0xFF22D3EE)),
-      _DispatchData("Pending", 180, Color(0xFFF59E0B)),
-      _DispatchData("Target Remaining", 200, Color(0xFFEF4444)),
-    ],
-    "Plant B - South": [
-      _DispatchData("Dispatched", 640, Color(0xFF22D3EE)),
-      _DispatchData("Pending", 260, Color(0xFFF59E0B)),
-      _DispatchData("Target Remaining", 300, Color(0xFFEF4444)),
-    ],
-    "Plant C - East": [
-      _DispatchData("Dispatched", 910, Color(0xFF22D3EE)),
-      _DispatchData("Pending", 140, Color(0xFFF59E0B)),
-      _DispatchData("Target Remaining", 150, Color(0xFFEF4444)),
-    ],
-  };
 
   @override
   Widget build(BuildContext context) {
@@ -131,14 +80,18 @@ class _DashboardHomeState extends State<DashboardHome> {
                   _profileCard(),
                   const SizedBox(height: 14),
                   _plantSelector(),
+                  const SizedBox(height: 12),
+                  _dateRangeCard(),
                   const SizedBox(height: 18),
                   _quickActions(),
                   const SizedBox(height: 24),
-                  _batchChart(),
+                  _dailyProductionGraph(),
                   const SizedBox(height: 24),
-                  _lineChart(),
+                  _lineProductionGraph(),
                   const SizedBox(height: 24),
-                  _dispatchChart(),
+                  _dispatchGraph(),
+                  const SizedBox(height: 24),
+                  _downtimeGraph(),
                   const SizedBox(height: 80),
                 ],
               ),
@@ -148,7 +101,10 @@ class _DashboardHomeState extends State<DashboardHome> {
       ),
     );
   }
-
+  // _dailyProductionGraph(),
+  // _lineProductionGraph(),
+  // _dispatchGraph(),
+  // _downtimeGraph(),
   // ───────── HEADER ─────────
   Widget _header() {
     return Padding(
@@ -170,8 +126,8 @@ class _DashboardHomeState extends State<DashboardHome> {
               ],
             ),
           ),
-          _iconBtn(Icons.refresh),
-          const SizedBox(width: 10),
+          // _iconBtn(Icons.refresh),
+          // const SizedBox(width: 10),
           _iconBtn(Icons.notifications),
         ],
       ),
@@ -197,7 +153,7 @@ class _DashboardHomeState extends State<DashboardHome> {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const SupervisorProfile ()),
+          MaterialPageRoute(builder: (_) =>  SupervisorProfile (userId: widget.userId,)),
         );
       },
       child: Container(
@@ -209,8 +165,8 @@ class _DashboardHomeState extends State<DashboardHome> {
           ),
         ),
         child: Row(
-          children: const [
-            CircleAvatar(
+          children: [
+            const CircleAvatar(
               radius: 26,
               backgroundColor: Color(0xFF22D3EE),
               child: Text("SK",
@@ -218,24 +174,20 @@ class _DashboardHomeState extends State<DashboardHome> {
                       color: Colors.black,
                       fontWeight: FontWeight.bold)),
             ),
-            SizedBox(width: 14),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Suresh Kumar",
-                      style: TextStyle(
+                  Text("${widget.username}",
+                      style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold)),
-                  Text("Supervisor",
+                  const Text("Supervisor",
                       style: TextStyle(color: Colors.white70)),
                 ],
               ),
             ),
-            Text("06:00 - 14:00",
-                style: TextStyle(
-                    color: Color(0xFF22D3EE),
-                    fontWeight: FontWeight.w600)),
           ],
         ),
       ),
@@ -266,7 +218,97 @@ class _DashboardHomeState extends State<DashboardHome> {
       ),
     );
   }
+  Widget _dateRangeCard() {
+    return GestureDetector(
+      onTap: _pickDateRange,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.date_range, color: Color(0xFF22D3EE)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                "${_formatDisplayDate(fromDate)}  →  ${_formatDisplayDate(toDate)}",
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+            const Icon(Icons.keyboard_arrow_down, color: Colors.white54)
+          ],
+        ),
+      ),
+    );
+  }
 
+  Future<void> _pickDateRange() async {
+    if (selectedPlantId == null) {
+      AppToast.show(context, "Please select plant first");
+      return;
+    }
+
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      initialDateRange: DateTimeRange(start: fromDate, end: toDate),
+    );
+
+    if (picked != null) {
+      setState(() {
+        fromDate = picked.start;
+        toDate = picked.end;
+      });
+
+      fetchPlantDashboard(); // 🔥 CALL API
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return date.toUtc().toIso8601String();
+  }
+
+  String _formatDisplayDate(DateTime date) {
+    return "${date.day.toString().padLeft(2, '0')}/"
+        "${date.month.toString().padLeft(2, '0')}/"
+        "${date.year}";
+  }
+
+  Future<void> fetchPlantDashboard() async {
+    setState(() => isLoadingDashboard = true);
+
+    try {
+      final response = await DioClient().post(
+        'plantheaddashboard/report',
+        {
+          "userId": widget.userId,
+          "plantId": selectedPlantId,
+          "fromDate": _formatDate(fromDate),
+          "toDate": _formatDate(toDate),
+        },
+      );
+
+      final data = response.data;
+
+      if (data["success"] == true) {
+        setState(() {
+          lineProduction = data["lineProduction"] ?? [];
+          downtime = data["downtime"] ?? [];
+          dispatchSummary = data["dispatchSummary"] ?? [];
+          batchSummary = data["batchSummary"];
+        });
+      } else {
+        AppToast.show(context, "Failed to load data");
+      }
+    } catch (e) {
+      AppToast.show(context, "Error loading dashboard");
+    } finally {
+      setState(() => isLoadingDashboard = false);
+    }
+  }
   // void _showPlantBottomSheet() {
   //   showModalBottomSheet(
   //     context: context,
@@ -320,15 +362,118 @@ class _DashboardHomeState extends State<DashboardHome> {
                 plant["plantName"],
                 style: const TextStyle(color: Colors.white),
               ),
-              onTap: () {
-                setState(() {
-                  selectedPlant = plant["plantName"];
-                });
-                Navigator.pop(context);
-              },
+                onTap: () {
+                  setState(() {
+                    selectedPlant = plant["plantName"];
+                    selectedPlantId = plant["plantId"];
+                  });
+                  Navigator.pop(context);
+                },
             );
           }).toList(),
         ),
+      ),
+    );
+  }
+
+  Widget _dailyProductionGraph() {
+    if (lineProduction.isEmpty) return const SizedBox();
+
+    Map<String, int> dailyMap = {};
+
+    for (var item in lineProduction) {
+      final date = item["productionDate"].toString().split("T")[0];
+      final production = item["totalProduction"] as int;
+
+      dailyMap[date] = (dailyMap[date] ?? 0) + production;
+    }
+
+    final chartData = dailyMap.entries
+        .map((e) => {"date": e.key, "value": e.value})
+        .toList()
+      ..sort((a, b) =>
+          (a["date"] as String).compareTo(b["date"] as String));
+
+    return _chartCard(
+      "Daily Production",
+      SfCartesianChart(
+        tooltipBehavior: TooltipBehavior(enable: true),
+        primaryXAxis: CategoryAxis(),
+        series: <CartesianSeries>[
+          SplineAreaSeries<dynamic, String>(
+            dataSource: chartData,
+            xValueMapper: (d, _) => d["date"],
+            yValueMapper: (d, _) => d["value"],
+            color: const Color(0xFF22D3EE).withOpacity(0.4),
+            borderColor: const Color(0xFF22D3EE),
+            borderWidth: 2,
+            markerSettings: const MarkerSettings(isVisible: true),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _lineProductionGraph() {
+    if (lineProduction.isEmpty) return const SizedBox();
+
+    return _chartCard(
+      "Line Wise Production",
+      SfCartesianChart(
+        tooltipBehavior: TooltipBehavior(enable: true),
+        primaryXAxis: CategoryAxis(),
+        series: <CartesianSeries>[
+          ColumnSeries<dynamic, String>(
+            dataSource: lineProduction,
+            xValueMapper: (d, _) => "Line ${d["lineId"]}",
+            yValueMapper: (d, _) => d["totalProduction"],
+            color: const Color(0xFF4ADE80),
+            dataLabelSettings:
+            const DataLabelSettings(isVisible: true),
+          )
+        ],
+      ),
+    );
+  }
+
+
+  Widget _dispatchGraph() {
+    if (dispatchSummary.isEmpty) return const SizedBox();
+
+    return _chartCard(
+      "Dispatch Summary",
+      SfCircularChart(
+        tooltipBehavior: TooltipBehavior(enable: true),
+        legend: Legend(isVisible: true),
+        series: <CircularSeries>[
+          DoughnutSeries<dynamic, String>(
+            dataSource: dispatchSummary,
+            xValueMapper: (d, _) => d["batchNumber"],
+            yValueMapper: (d, _) => d["totalDispatched"],
+            dataLabelSettings:
+            const DataLabelSettings(isVisible: true),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _downtimeGraph() {
+    if (downtime.isEmpty) return const SizedBox();
+
+    return _chartCard(
+      "Downtime (Minutes)",
+      SfCartesianChart(
+        tooltipBehavior: TooltipBehavior(enable: true),
+        primaryXAxis: CategoryAxis(),
+        series: <CartesianSeries>[
+          ColumnSeries<dynamic, String>(
+            dataSource: downtime,
+            xValueMapper: (d, _) => "Line ${d["lineNumber"]}",
+            yValueMapper: (d, _) => d["totalDowntimeMinutes"],
+            color: const Color(0xFFF59E0B),
+          )
+        ],
       ),
     );
   }
@@ -388,126 +533,9 @@ class _DashboardHomeState extends State<DashboardHome> {
     );
   }
 
-  // ───────── BATCH CHART ─────────
-  Widget _batchChart() {
-    return _chartCard(
-      "Batch Wise Production",
-      SfCartesianChart(
-        primaryXAxis: CategoryAxis(),
-        series: <CartesianSeries<_BatchData, String>>[
-          ColumnSeries<_BatchData, String>(
-            dataSource: batchData[selectedPlant] ?? [],
-          xValueMapper: (d, _) => d.batch,
-            yValueMapper: (d, _) => d.units,
-            color: const Color(0xFF22D3EE),
-          ),
-        ],
-      ),
-    );
-  }
 
-  // ───────── LINE CHART ─────────
-  Widget _lineChart() {
-    final colors = [
-      const Color(0xFF22D3EE),
-      const Color(0xFF4ADE80),
-      const Color(0xFFF59E0B),
-    ];
-
-    return _chartCard(
-      "Line Wise Production (Real-Time)",
-      SfCartesianChart(
-        primaryXAxis: CategoryAxis(),
-        tooltipBehavior: TooltipBehavior(enable: true),
-        series: <CartesianSeries<_LineData, String>>[
-          ColumnSeries<_LineData, String>(
-            dataSource: lineData[selectedPlant]??[],
-            xValueMapper: (d, _) => d.line,
-            yValueMapper: (d, _) => d.units,
-            pointColorMapper: (d, index) => colors[index % colors.length],
-            dataLabelSettings:
-            const DataLabelSettings(isVisible: true),
-          ),
-        ],
-      ),
-    );
-  }
 
   // ───────── DISPATCH PIE CHART ─────────
-  Widget _dispatchChart() {
-    final data = dispatchData[selectedPlant]??[];
-
-    final dispatchedItem = data.where((e) => e.status == "Dispatched").toList();
-
-    final int dispatched =
-    dispatchedItem.isNotEmpty ? dispatchedItem.first.value : 0;
-
-
-    return _chartCard(
-      "Today's Dispatch Status",
-      SfCircularChart(
-        margin: EdgeInsets.zero,
-        tooltipBehavior: TooltipBehavior(
-          enable: true,
-          format: 'point.x : point.y cases',
-        ),
-        legend: Legend(
-          isVisible: true,
-          position: LegendPosition.bottom,
-          overflowMode: LegendItemOverflowMode.wrap,
-          textStyle: const TextStyle(
-            color: Colors.white60,
-            fontSize: 12,
-          ),
-        ),
-        annotations: <CircularChartAnnotation>[
-          CircularChartAnnotation(
-            widget: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  "$dispatched",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Text(
-                  "Dispatched",
-                  style: TextStyle(
-                    color: Colors.white60,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-        series: <CircularSeries<_DispatchData, String>>[
-          DoughnutSeries<_DispatchData, String>(
-            dataSource: data,
-            xValueMapper: (d, _) => d.status,
-            yValueMapper: (d, _) => d.value,
-            pointColorMapper: (d, _) => d.color,
-            radius: '85%',
-            innerRadius: '65%', // ✅ DONUT LOOK
-            explode: true,
-            explodeIndex: 0,
-            animationDuration: 900,
-            dataLabelSettings: const DataLabelSettings(
-              isVisible: true,
-              labelPosition: ChartDataLabelPosition.outside,
-              textStyle: TextStyle(
-                color: Colors.white70,
-                fontSize: 11,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _chartCard(String title, Widget chart) {
     return Container(
